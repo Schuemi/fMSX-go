@@ -1,0 +1,4 @@
+COMPONENT_PRIV_INCLUDEDIRS := ../odroidGo
+CPPFLAGS := -DBPS16 -DBPP16 -DLSB_FIRST -DESP32
+CFLAGS :=  -Ofast -mlongcalls -Wno-error
+
