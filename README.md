@@ -6,11 +6,11 @@ to build it, please download fMSX from here: https://fms.komkon.org/fMSX/
 But there is also a precompiled Firmware file here: https://github.com/Schuemi/fMSX-go/releases/tag/20180816
 
 Please create these directories on your SD Card manually:
-
+```
 /roms/msx/bios
 /roms/msx/games
 /odroid/data/msx
-
+```
 and put the BIOS files in /roms/msx/bios. You need at least the files MSX2.ROM, MSX2EXT.ROM and DISK.ROM.
 
 You can have subfolders in /roms/msx/games. If you have much games, subfolders are recommend. You should not have more than 150 Games in one folder.
