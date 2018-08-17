@@ -15,7 +15,7 @@
 #define LIBODROIDGO_H
 
 #define FMSX_CONFIG_FILE "/sd/odroid/data/msx/config.ini"
-#define FMSX_ROOT_GAMESDIR "/sd/roms/msx/games"
+#define FMSX_ROOT_GAMESDIR "/sd/roms/msx"
 
 
 ///////////////// AUDIO ////////////////////////
