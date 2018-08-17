@@ -21,7 +21,7 @@
 #define AUDIO_BUFFER_SAMPLES 128
 
 
-#define NO_SOUND
+//#define NO_SOUND
 
 
 static sample *streamAudioBuffer1;
@@ -44,7 +44,7 @@ void audioTask(void* arg)
   {
     xQueuePeek(audioQueue, &param, portMAX_DELAY);
 #ifndef NO_SOUND
-   if (! inMenue)odroid_audio_submit(currentAudioBufferSend, audioBufferSizeSend/2);
+   odroid_audio_submit(currentAudioBufferSend, audioBufferSizeSend/2);
 #endif
     xQueueReceive(audioQueue, &param, portMAX_DELAY);
   }
