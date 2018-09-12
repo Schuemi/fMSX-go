@@ -228,7 +228,7 @@ void videoTask(void* arg)
         pixel* cp;
         pixel* bg;    
         
-        const pixel* keyb = (pixel*)keyboard_image.pixel_data;
+        const pixel* keyb = (pixel*)(keyboard_image.pixel_data + keyboard_image.width*2);
         const pixel* op;
         int imageWidth;
         int imageHeight;
@@ -1279,7 +1279,7 @@ void moveCursor(int x, int y) {
     if (cursorX < 2) cursorX = 2;
     if (cursorY < 2) cursorY = 2;
     if (cursorX > WIDTH_OVERLAY - CURSOR_MAX_WIDTH) cursorX = WIDTH_OVERLAY - CURSOR_MAX_WIDTH;
-    if (cursorY > HEIGHT_OVERLAY/2 - CURSOR_MAX_HEIGHT) cursorY = HEIGHT_OVERLAY/2 - CURSOR_MAX_HEIGHT;
+    if (cursorY > HEIGHT_OVERLAY/2 - (CURSOR_MAX_HEIGHT + 1)) cursorY = HEIGHT_OVERLAY/2 - (CURSOR_MAX_HEIGHT + 1);
     
     
     int k = getKey(cursorX + 4, cursorY);

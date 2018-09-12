@@ -93,7 +93,7 @@ unsigned int InitAudio(unsigned int Rate,unsigned int Latency) {
     volLevel = ini_getl("FMSX", "VOLUME", ODROID_VOLUME_LEVEL1, FMSX_CONFIG_FILE);
     
     if (volLevel >= ODROID_VOLUME_LEVEL_COUNT || volLevel < ODROID_VOLUME_LEVEL0) volLevel = ODROID_VOLUME_LEVEL1;
-    odroid_audio_volume_set(ODROID_VOLUME_LEVEL0);
+    odroid_audio_volume_set(volLevel);
     
     xTaskCreatePinnedToCore(&audioTask, "audioTask", 2048, NULL, 5, NULL, 1);
     
