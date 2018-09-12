@@ -3,7 +3,7 @@ fMSX Port to ODROID-GO
 
 to build it, please download fMSX from here: https://fms.komkon.org/fMSX/
 
-But there is also a precompiled Firmware file here: https://github.com/Schuemi/fMSX-go/releases/tag/20180816
+But there is also a precompiled Firmware file here: https://github.com/Schuemi/fMSX-go/tags
 
 Please create these directories on your SD Card manually:
 ```
@@ -30,4 +30,22 @@ B = JST_FIREB
 You can have for every game a custom mapping file. Put the file in /odroid/data/msx. It schould have the name [GAME].ini. For example if your gamefiles name is GTA3.rom the keyfilename has to be GTA3.ini.
 
 Gamesaves are saved in the same directory as the game itself. It is calles [GAME].sav and is compatible to every other fMSX port. So you can continue playing on pc, playstation etc...
+
+# Virtual Keyboard:
+
+You can open a virtual keyboard by pressing an hold the "A" button ans then the "Menu" button. On the virtual keyboard you can use the "A" or the "B" button to press a key. If you are holding a button, this button will also be holded in the emulator. So if you go to the "shift" key, press and hold "A" and then while pressing "A" go to the "1" key and press "B"  you will write a "!". Because on the real MSX if you would press shift + 1 you will also write a "!"
+
+# Next:
+
+The next things I'm planning are:
+
+- resolve sound issues in some games
+- resolve some speed and color issues with some games
+- complete the new menu
+- implement preview screenshots of the games
+- include WLAN
+- 2 player mode over WLAN
+
+
+
 
