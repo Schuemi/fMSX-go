@@ -1,3 +1,27 @@
+/*
+ * The MIT License
+ *
+ * Copyright 2018 Schuemi.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 #include "LibOdroidGo.h"
 
 
@@ -23,20 +47,19 @@
 #include "freertos/task.h"
 
 
+
 int keyMapping[ODROID_INPUT_MAX];
 char pushedKeys[ODROID_INPUT_MAX];
-
-
-
+char* lastGame;
+int pushedVirtKeyboardKey = -1;
+int holdVirtKeyboardKey = -1;
+int holdVirtKeyboardSelectKey = -1;
 uint8_t inMenue = 0;
-
+uint8_t vKeyboardShow = 0;
 /// for the Menu
 unsigned int lastKey = ODROID_INPUT_MENU;
 unsigned int pressCounter = 0;
 ///////////
-
-
-
 
 
 
@@ -102,6 +125,7 @@ char LoadKeyMapping(char* KeyFile) {
     
 }
 
+
 void loadKeyMappingFromGame(const char* gameFileName) {
     const char* filename = getFileName(gameFileName);
     char* keyBoardFile = malloc(256);
@@ -121,34 +145,32 @@ void loadKeyMappingFromGame(const char* gameFileName) {
 int InitMachine(void){ 
     
     
-   initFiles();
-    
-    
-   
-    
+    lastGame = malloc(1024);
+    initFiles();
     setDefaultKeymapping();
-    
-    
-    int res = ini_gets("FMSX", "LASTGAME", "", GetLastLoadedFile(), 512, FMSX_CONFIG_FILE);
-    if (res) {
-        loadKeyMappingFromGame(GetLastLoadedFile());
-        if (strstr(GetLastLoadedFile(), ".rom") || strstr(GetLastLoadedFile(), ".mx2")) ROMName[0] = GetLastLoadedFile();
-        if (strstr(GetLastLoadedFile(), ".dsk")) DSKName[0] = GetLastLoadedFile();
-       
-    }
-    
-    
-    
-    
-  
+
     InitVideo();
+    odroidFmsxGUI_initMenu();
+
+    int res = ini_gets("FMSX", "LASTGAME", "", lastGame, 1024, FMSX_CONFIG_FILE);
+    if (res) {
+        loadKeyMappingFromGame(lastGame);
+        if (hasExt(lastGame, ".rom\0.mx1\0.mx2\0\0")) ROMName[0] = lastGame;
+        if (hasExt(lastGame, ".dsk\0\0")) DSKName[0] = lastGame;
+        if (hasExt(lastGame, ".cas\0\0")) CasName = lastGame;
+        
+        odroidFmsxGUI_setLastLoadedFile(lastGame);
+
+    }
+
     InitSound(AUDIO_SAMPLE_RATE, 0);
    
+
    
-   
-    
+
     return 1; 
 }
+
 
 
 
@@ -163,6 +185,46 @@ void checkKey(int key, odroid_gamepad_state out_state) {
         if (! out_state.values[ODROID_INPUT_START] && pushedKeys[ODROID_INPUT_START]){ KBD_RES(keyMapping[ODROID_INPUT_START] >> 8); pushedKeys[ODROID_INPUT_START] = 0;}
     }
 }
+void keybmoveCursor(odroid_gamepad_state out_state) {
+    
+    if (out_state.values[ODROID_INPUT_UP]) moveCursor(0,-2);
+    if (out_state.values[ODROID_INPUT_DOWN])moveCursor(0,2);
+    if (out_state.values[ODROID_INPUT_LEFT]) moveCursor(-2,0);
+    if (out_state.values[ODROID_INPUT_RIGHT]) moveCursor(2,0);
+   
+    
+    if (out_state.values[ODROID_INPUT_A] && pushedVirtKeyboardKey == -1){
+        int key = mousePress();
+        if (key != -1) 
+        {
+            KBD_SET(key); 
+            pushedVirtKeyboardKey = key; 
+        }
+        
+    }
+    if (! out_state.values[ODROID_INPUT_A] && pushedVirtKeyboardKey != -1) {
+        KBD_RES(pushedVirtKeyboardKey);
+        pushedVirtKeyboardKey = -1;
+    }
+    if (out_state.values[ODROID_INPUT_B] && holdVirtKeyboardKey == -1){
+        int key = mousePress();
+        if (key != -1) 
+        {
+            KBD_SET(key); 
+            holdVirtKeyboardKey = key; 
+        }
+    }
+    if (! out_state.values[ODROID_INPUT_B] && holdVirtKeyboardKey != -1){
+        KBD_RES(holdVirtKeyboardKey);
+        holdVirtKeyboardKey = -1;
+    }
+    if (out_state.values[ODROID_INPUT_SELECT] && holdVirtKeyboardSelectKey == -1){
+        doFlipScreen();
+        holdVirtKeyboardSelectKey = 1;
+    }
+    if (! out_state.values[ODROID_INPUT_SELECT]) holdVirtKeyboardSelectKey = -1;
+     
+}
 unsigned int Joystick(void) {
     unsigned int returnState = 0;
     
@@ -173,6 +235,28 @@ unsigned int Joystick(void) {
    
     bool pressed = false;
     for (int i = 0; i < ODROID_INPUT_MAX; i++) if (out_state.values[i]) pressed = true;
+    if (! vKeyboardShow) {
+        if (out_state.values[ODROID_INPUT_A] && out_state.values[ODROID_INPUT_MENU]){
+            vKeyboardShow = 2;
+            showVirtualKeyboard();
+            return 0;
+        }
+    } else if (vKeyboardShow == 1) {
+        if (out_state.values[ODROID_INPUT_MENU]){
+            vKeyboardShow = 3;
+            hideVirtualKeyboard();
+            clearScreen();
+        }
+    } else if(vKeyboardShow == 2 && !out_state.values[ODROID_INPUT_MENU]) {
+        vKeyboardShow = 1;
+    } else if(vKeyboardShow == 3 && !out_state.values[ODROID_INPUT_MENU]) {
+        vKeyboardShow = 0;
+        
+    }
+    if (vKeyboardShow) {
+        if (vKeyboardShow == 1) keybmoveCursor(out_state);
+        return 0;
+    }
     if (inMenue && !pressed) inMenue = 0; 
     
     /* joystick mapping */
@@ -206,20 +290,13 @@ unsigned int Joystick(void) {
             pause_audio();
             clearOverlay();
             
-            int action = MenuMSX();
-            if (action == MENU_ACTION_LOADFILE){
-                char* lastLoadedFile = GetLastLoadedFile();
-                if (lastLoadedFile) {
-                    ini_puts("FMSX", "LASTGAME", lastLoadedFile, FMSX_CONFIG_FILE);
-                }
-
-                if (lastLoadedFile && strlen(lastLoadedFile) > 0) {
-                  loadKeyMappingFromGame(lastLoadedFile);
-                }
-            }
-            if (action == MENU_ACTION_DROPROM){
-                ini_puts("FMSX", "LASTGAME", "", FMSX_CONFIG_FILE);
-            }
+            
+            if (vKeyboardShow) hideVirtualKeyboard();
+            odroidFmsxGUI_showMenu();
+            if (vKeyboardShow) showVirtualKeyboard();
+                
+                
+            
             restart_audio();
 
             clearScreen();
@@ -239,7 +316,8 @@ unsigned int Joystick(void) {
 void TrashMachine(void){
    
    TrashVideo();
-    
+   free(lastGame);
+   
 }
 
 
@@ -283,45 +361,3 @@ unsigned int Mouse(byte N) {return 0;}
 
 
 
-
-
-/** WaitKeyOrMouse() *****************************************/
-/** Wait for a key or a mouse button to be pressed. Returns **/
-/** the same result as GetMouse(). If no mouse buttons      **/
-/** reported to be pressed, call GetKey() to fetch a key.   **/
-/*************************************************************/
-
-unsigned int WaitKeyOrMouse(void) {
-    register unsigned int j = 0xFFFFFF;
-    odroid_gamepad_state out_state;
-    bool pressed;
-    do{
-        pressed = false;
-        odroid_input_gamepad_read(&out_state);
-        for (int i = 0; i < ODROID_INPUT_MAX; i++) if (out_state.values[i]) {pressed = true; j = i;}
-        if (!pressed) {j = lastKey = 0xFFFFFF;pressCounter=0;} else pressCounter++;
-        vTaskDelay(6 / portTICK_PERIOD_MS);
-        
-    }while(j == lastKey && pressCounter < 100);
-    
-   lastKey = j;
-   
-   switch(j) {
-       case ODROID_INPUT_RIGHT: return CON_RIGHT;
-       case ODROID_INPUT_LEFT: return CON_LEFT;
-       case ODROID_INPUT_UP: return CON_UP;
-       case ODROID_INPUT_DOWN: return CON_DOWN;
-       case ODROID_INPUT_A: return CON_OK;
-       default: return 0;
-   }
-   
-   
-   return 0;
-}
-unsigned int GetKey(void) {
-   // printf("GetKey\n");
-    return 0;
-}
-unsigned int WaitKey(void) {
-    return WaitKeyOrMouse();
-}

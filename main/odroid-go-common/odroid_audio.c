@@ -13,7 +13,7 @@
 static int AudioSink = ODROID_AUDIO_SINK_SPEAKER;
 static float Volume = 1.0f;
 static odroid_volume_level volumeLevel = ODROID_VOLUME_LEVEL3;
-static int volumeLevels[] = {0, 25, 250, 500, 1000};
+static int volumeLevels[] = {0, 25, 125, 250, 300};
 static int audio_sample_rate;
 
 

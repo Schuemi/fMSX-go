@@ -10,11 +10,12 @@
 
 /* map required file I/O types and functions to the standard C library */
 #include <stdio.h>
+#include "LibOdroidGo.h"
 
 #define INI_FILETYPE                  FILE*
-#define ini_openread(filename,file)   ((*(file) = fopen((filename),"rb")) != NULL)
-#define ini_openwrite(filename,file)  ((*(file) = fopen((filename),"wb")) != NULL)
-#define ini_close(file)               (fclose(*(file)) == 0)
+#define ini_openread(filename,file)   ((*(file) = _fopen((filename),"rb")) != NULL)
+#define ini_openwrite(filename,file)  ((*(file) = _fopen((filename),"wb")) != NULL)
+#define ini_close(file)               (_fclose(*(file)) == 0)
 #define ini_read(buffer,size,file)    (fgets((buffer),(size),*(file)) != NULL)
 #define ini_write(buffer,file)        (fputs((buffer),*(file)) >= 0)
 #define ini_rename(source,dest)       (rename((source), (dest)) == 0)

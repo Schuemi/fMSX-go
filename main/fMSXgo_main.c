@@ -1,17 +1,36 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * The MIT License
+ *
+ * Copyright 2018 Schuemi.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
-
 /* 
  * File:   main.cpp
- * Author: Test
+ * Author: Schuemi
  *
  * Created on 25. Juli 2018, 09:38
  */
 
 
+// used online Font creator: http://dotmatrixtool.com
+// set to : 8px by 8px, row major, little endian.
 
 #include <stdint.h>
 #include <esp_err.h>
@@ -22,12 +41,18 @@
 #include "EMULib.h"
 #include "Console.h"
 
+
 #include "esp_system.h"
 #include "odroid_input.h"
 #include "nvs_flash.h"
 
+#include "LibOdroidGo.h"
 
+#ifndef PIXEL
+    #define PIXEL(R,G,B)    (pixel)(((31*(R)/255)<<11)|((63*(G)/255)<<5)|(31*(B)/255))
+#endif
 const char* SD_BASE_PATH = "/sd";
+
 
 //mkfw.exe "fMSX" tile.raw 0 16 2097152 fMSX goMSX.bin
 void app_main(void) {
@@ -71,17 +96,18 @@ void app_main(void) {
         RAMPages = 2;
         VRAMPages = 2;
         
-        StartMSX(Mode,RAMPages,VRAMPages);
-        switch (failure) {
-           case 1: 
-                CONMsg(-1,-1,-1,-1,PIXEL(0,0,0),PIXEL(0,255,0),"Error","Cannot mount SDCard\0\0");
-                break;
-           default:
-                CONMsg(-1,-1,-1,-1,PIXEL(0,0,0),PIXEL(0,255,0),"Error","Start fMSX failed. Missing bios files?\0\0");
+        if (!StartMSX(Mode,RAMPages,VRAMPages)) {
+            switch (failure) {
+               case 1: 
+                    odroidFmsxGUI_msgBox("Error","Cannot mount SDCard", 1);
+                    break;
+               default:
+                    odroidFmsxGUI_msgBox("Error","Start fMSX failed.\nMissing bios files?", 1);
+            }
+            
         }
-        ShowVideo();
        
-       
+        odroidFmsxGUI_msgBox("End","The emulation was shutted down\nYou can turn off your device", 1);
     } 
    
 }

@@ -1236,7 +1236,7 @@ void ili9341_write_frame_nes(uint8_t* buffer, uint16_t* myPalette, uint8_t scale
 //         send_continue_wait();
 //     }
 // }
-uint16_t msx_lastBgColor = 0;
+
 void ili9341_write_frame_msx(short left, short top, short width, short height, uint16_t* buffer, uint16_t bgColor)
 {
     odroid_display_lock_msx_display();
@@ -1251,9 +1251,8 @@ void ili9341_write_frame_msx(short left, short top, short width, short height, u
 
     
 
-    if (buffer == NULL || msx_lastBgColor != bgColor)
+    if (buffer == NULL)
     {
-       msx_lastBgColor = bgColor;
        // clear the buffer
         for (int i = 0; i < LINE_BUFFERS; ++i)
         {
@@ -1262,9 +1261,9 @@ void ili9341_write_frame_msx(short left, short top, short width, short height, u
         }
 
         // clear the screen
-        send_reset_drawing(0, 0, 320, 240);
+        send_reset_drawing(0, top, 320, top+height);
 
-        for (y = 0; y < 240; y += 4)
+        for (y = top; y < top+height; y += 4)
         {
             uint16_t* line_buffer = line_buffer_get();
             send_continue_line(line_buffer, 320, 4);

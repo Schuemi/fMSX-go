@@ -1,8 +1,28 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * The MIT License
+ *
+ * Copyright 2018 Schuemi.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
+
+
 #include "MSX.h"
 #include "EMULib.h"
 #include <esp_heap_caps.h>
@@ -18,7 +38,7 @@
 
 #include <string.h>
 
-#define AUDIO_BUFFER_SAMPLES 128
+#define AUDIO_BUFFER_SAMPLES 256
 
 
 //#define NO_SOUND
@@ -62,6 +82,8 @@ unsigned int InitAudio(unsigned int Rate,unsigned int Latency) {
     
     streamAudioBuffer1 = (sample*)heap_caps_malloc(AUDIO_BUFFER_SAMPLES*sizeof(sample)*2, MALLOC_CAP_DMA | MALLOC_CAP_8BIT);
     streamAudioBuffer2 = (sample*)heap_caps_malloc(AUDIO_BUFFER_SAMPLES*sizeof(sample)*2, MALLOC_CAP_DMA | MALLOC_CAP_8BIT);
+    if (! streamAudioBuffer1){ printf("streamAudioBuffer1 failed!\n"); return 0;}
+    if (! streamAudioBuffer2){ printf("streamAudioBuffer2 failed!\n"); return 0;}
     currentAudioBufferWrite = streamAudioBuffer1;
     currentAudioBufferSend = streamAudioBuffer2;
     
@@ -69,8 +91,9 @@ unsigned int InitAudio(unsigned int Rate,unsigned int Latency) {
     
     odroid_audio_init(ODROID_AUDIO_SINK_SPEAKER, Rate);
     volLevel = ini_getl("FMSX", "VOLUME", ODROID_VOLUME_LEVEL1, FMSX_CONFIG_FILE);
+    
     if (volLevel >= ODROID_VOLUME_LEVEL_COUNT || volLevel < ODROID_VOLUME_LEVEL0) volLevel = ODROID_VOLUME_LEVEL1;
-    odroid_audio_volume_set(volLevel);
+    odroid_audio_volume_set(ODROID_VOLUME_LEVEL0);
     
     xTaskCreatePinnedToCore(&audioTask, "audioTask", 2048, NULL, 5, NULL, 1);
     

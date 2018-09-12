@@ -1,12 +1,29 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * The MIT License
+ *
+ * Copyright 2018 Schuemi.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
-
 /* 
  * File:   Video.c
- * Author: Test
+ * Author: Schuemi
  *
  * Created on 16. August 2018, 14:11
  */
@@ -21,9 +38,129 @@
 #include "freertos/task.h"
 #include "LibOdroidGo.h"
 
+#ifndef  BPP16
+    #define BPP16
+#endif
+
+#include "ImageMux.h"
 #include "MSX.h"
 #include "EMULib.h"
 
+int cursorX = 10;
+int cursorY = 10;
+
+
+uint16_t lastBGColor = 0;
+enum cursorTypeEnum{
+    CURSOR_ARROW,
+    CURSOR_HAND
+};
+enum cursorTypeEnum cursorType = CURSOR_ARROW;
+
+#define KEYS_COUNT 73
+struct keyPosition{
+    uint16_t x1; 
+    uint16_t y1; 
+    uint16_t x2; 
+    uint16_t y2;
+    uint16_t key;
+};
+
+static const struct {
+    uint8_t keys;
+    struct keyPosition kyPos[KEYS_COUNT];
+    
+} keyPositions = {
+    KEYS_COUNT,
+   //row 1, 8 keys
+    24,7,55,20,KBD_F1,
+    60,7,90,20,KBD_F2,
+    94,7,125,20,KBD_F3,
+    130,7,159,20,KBD_F4,
+    165,7,195,20,KBD_F5,
+    235,7,266,20,KBD_STOP,
+    274,7,288,20,KBD_INSERT,
+    292,7,306,20,KBD_DELETE,
+   // row 2, 17 keys
+    5,24,20,38,KBD_ESCAPE,
+    24,24,36,38,'1',
+    41,24,53,38,'2',
+    60,24,71,38,'3',
+    76,24,89,38,'4',
+    94,24,107,38,'5',
+    111,24,124,38,'6',
+    130,24,142,38,'7',
+    147,24,160,38,'8',
+    164,24,176,38,'9',
+    184,24,194,38,'0',
+    199,24,211,38,'-',
+    215,24,229,38,'=',
+    234,24,246,38,'\\',
+    251,24,263,38,KBD_BS,
+    276,24,288,38,KBD_SELECT,
+    292,24,307,38,KBD_HOME,
+   // row 3, 14 
+    9,42,28,55,KBD_TAB,
+    31,42,44,55,'Q',
+    50,42,62,55,'W',
+    66,42,79,55,'E',
+    85,42,97,55,'R',
+    101,42,114,55,'T',
+    120,42,132,55,'Y',
+    137,42,151,55,'U',
+    155,42,169,55,'I',
+    174,42,186,55,'O',
+    191,42,204,55,'P',
+    208,42,222,55,'[',
+    225,42,238,55,']',
+    245,42,265,73,KBD_ENTER,
+  // row 4, 14 
+    12,60,30,73,KBD_TAB,
+    35,60,48,73,'A',
+    53,60,66,73,'S',
+    70,60,83,73,'D',
+    88,60,102,73,'F',
+    106,60,120,73,'G',
+    124,60,137,73,'H',
+    142,60,155,73,'J',
+    159,60,173,73,'K',
+    177,60,189,73,'L',
+    194,60,207,73,':',
+    212,60,225,73,'"',
+    230,60,242,73,'~',
+    284,60,301,73,KBD_UP,
+  // row 5, 15 
+    16,76,39,88,KBD_SHIFT,       
+    43,76,56,88,'Z',       
+    62,76,75,88,'X',       
+    80,76,93,88,'C',       
+    97,76,110,88,'V',       
+    116,76,128,88,'B',       
+    133,76,145,88,'N',       
+    152,76,164,88,'M',       
+    168,76,180,88,'<',       
+    185,76,200,88,'>',       
+    205,76,216,88,'?',       
+    222,76,244,88,KBD_SHIFT,       
+    249,76,260,88,'$',       
+    273,76,291,88,KBD_LEFT,       
+    292,76,313,88,KBD_RIGHT,    
+    
+  // row 6, 5 
+    42,95,55,108,KBD_CAPSLOCK,       
+    61,95,73,108,KBD_GRAPH,       
+    78,95,199,108,KBD_SPACE,       
+    203,95,218,108,KBD_GRAPH,       
+    285,95,305,108,KBD_DOWN,       
+    
+    
+};
+
+
+
+
+#define CURSOR_MAX_WIDTH (22)
+#define CURSOR_MAX_HEIGHT (22)
 
 #define ILI9341_COLOR(r, g, b)\
 	(((uint16_t)b) >> 3) |\
@@ -32,12 +169,29 @@
 
 
 pixel* framebuffer[2];
+pixel* cursor;
+
+pixel* cursorBackGround;
+int backGroundX = -1;
+int backGroundY = -1;
+int backGroundHeight = -1;
+int backGroundWidth = -1;
+
 QueueHandle_t videoQueue;
-uint16_t VideoTaskCommand;
+uint16_t VideoTaskCommand = 1;
 static uint16_t BPal[256],XPal[80],XPal0; 
 Image overlay;
 uint32_t FirstLine = 18;
 uint16_t lastLine = 0;
+
+char showKeyboard = 0;
+char reDrawKeyboard = 0;
+char reDrawCursor = 0;
+char flipScreen = 0;
+
+//////////////////////////////////////////////////////7
+
+
 
 void videoTask(void* arg)
 {
@@ -50,13 +204,84 @@ void videoTask(void* arg)
   while(1)
   {
     xQueuePeek(videoQueue, &param, portMAX_DELAY);
-     if (VideoTaskCommand == 1) {// clear screen first
-       ili9341_write_frame_msx(0,0,WIDTH_OVERLAY,HEIGHT_OVERLAY, NULL, XPal[BGColor]);
+     if (VideoTaskCommand == 1 || lastBGColor != XPal[BGColor]) {// clear screen first
+       if (! showKeyboard) 
+         ili9341_write_frame_msx(0,0,WIDTH_OVERLAY,HEIGHT_OVERLAY, NULL, XPal[BGColor]);
+       else
+         ili9341_write_frame_msx(0,0,WIDTH_OVERLAY,HEIGHT_OVERLAY/2, NULL, XPal[BGColor]);
+       
+       lastBGColor = XPal[BGColor];
      }
      VideoTaskCommand = 0;
    
-    ili9341_write_frame_msx(MSX_DISPLAY_X, MSX_DISPLAY_Y                            ,WIDTH,HEIGHT/2, framebuffer[0], XPal[BGColor]);
-    ili9341_write_frame_msx(MSX_DISPLAY_X, MSX_DISPLAY_Y + (HEIGHT/2)               ,WIDTH,HEIGHT/2, framebuffer[1], XPal[BGColor]);
+     if (! flipScreen)
+        ili9341_write_frame_msx(MSX_DISPLAY_X, MSX_DISPLAY_Y  ,WIDTH,HEIGHT/2, framebuffer[0], XPal[BGColor]);
+     else
+        ili9341_write_frame_msx(MSX_DISPLAY_X, MSX_DISPLAY_Y  ,WIDTH,HEIGHT/2, framebuffer[1], XPal[BGColor]);
+     
+    
+    if (! showKeyboard) 
+        ili9341_write_frame_msx(MSX_DISPLAY_X, MSX_DISPLAY_Y + (HEIGHT/2)  ,WIDTH,HEIGHT/2, framebuffer[1], XPal[BGColor]);
+    
+    
+    else if (reDrawKeyboard || reDrawCursor) {
+        pixel* cp;
+        pixel* bg;    
+        
+        const pixel* keyb = (pixel*)keyboard_image.pixel_data;
+        const pixel* op;
+        int imageWidth;
+        int imageHeight;
+       
+        if (cursorType == CURSOR_ARROW){
+            op = (pixel*)cursor_image.pixel_data;
+            imageWidth = cursor_image.width;
+            imageHeight = cursor_image.height;
+        } else{
+            op = (pixel*)hand_image.pixel_data;
+            imageWidth = hand_image.width;
+            imageHeight = hand_image.height;
+           
+        }
+
+        
+        int cursorWidth = imageWidth;
+        int cursorHeight = imageHeight;
+        if (cursorHeight + cursorY > keyboard_image.height) cursorHeight = keyboard_image.height - cursorY;
+        // recover background
+        if (backGroundX != -1){
+            ili9341_write_frame_rectangleLE(backGroundX, HEIGHT_OVERLAY/2 + backGroundY, backGroundWidth, backGroundHeight, (uint16_t*)cursorBackGround);
+        }
+        // copy backgroud in cursor and background
+        cp = cursor;
+        bg = cursorBackGround;
+        for (int y = 0; y < cursorHeight; y++) {
+            for (int x = 0; x < cursorWidth; x++) {
+                pixel p = keyb[(cursorX+x) + ((cursorY + y)*keyboard_image.width)];
+                *cp++ = p;
+                *bg++ = p;
+            }
+        }
+       
+        
+        backGroundX = cursorX;
+        backGroundY = cursorY;
+        backGroundWidth = cursorWidth;
+        backGroundHeight = cursorHeight;
+               
+        cp = cursor;
+        for (int y = 0; y < imageHeight; y++) {
+            for (int x = 0; x < imageWidth; x++) {
+                pixel p = *op++;
+                if (p != 0xFFFF && y > 0) *cp++ = p; else cp++; // TODO: had a problem with gimp: the first row is not right, don't know why.
+            }
+        }
+        // TODO: the same in my keyboard image. the first row is crap, so i down't draw it. have to find out why GIMP's first line is crap...
+        if (reDrawKeyboard) ili9341_write_frame_rectangleLE(0, HEIGHT_OVERLAY/2, keyboard_image.width, keyboard_image.height - 1, (uint16_t*)(keyboard_image.pixel_data + keyboard_image.width*2));
+        ili9341_write_frame_rectangleLE(cursorX, HEIGHT_OVERLAY/2 + cursorY, cursorWidth, cursorHeight, (uint16_t*)cursor);
+        reDrawKeyboard = 0;
+        reDrawCursor = 0;
+    }
     
     xQueueReceive(videoQueue, &param, portMAX_DELAY);
   }
@@ -69,16 +294,22 @@ void videoTask(void* arg)
   while (1) {}
 }
 
+///////////////////////////////////////////////////////
+
 
 int InitVideo(void) {
-     videoQueue = xQueueCreate(1, sizeof(uint16_t*));
-   
+    videoQueue = xQueueCreate(1, sizeof(uint16_t*));
     for (int i = 0; i < 2; i++) {
          framebuffer[i] = (pixel*)heap_caps_malloc(WIDTH*(HEIGHT/2)*sizeof(pixel), MALLOC_CAP_DMA | MALLOC_CAP_8BIT);
          memset(framebuffer[i], 0, WIDTH*(HEIGHT/2)*sizeof(pixel));
         if (!framebuffer[i]){ printf("malloc framebuffer%d failed!\n", i); return 0; }
     }
- 
+    cursor = (pixel*)heap_caps_malloc(CURSOR_MAX_WIDTH*CURSOR_MAX_HEIGHT*sizeof(pixel), MALLOC_CAP_DMA | MALLOC_CAP_8BIT);
+    if (!cursor){ printf("malloc cursor failed!\n"); return 0; }
+    
+    cursorBackGround= (pixel*)heap_caps_malloc(CURSOR_MAX_WIDTH*CURSOR_MAX_HEIGHT*sizeof(pixel), MALLOC_CAP_DMA | MALLOC_CAP_8BIT);
+    if (!cursorBackGround){ printf("malloc cursorBackGround failed!\n"); return 0; }
+    
     /* Menu overlay*/
     overlay.Data = (pixel*)heap_caps_malloc(WIDTH_OVERLAY*HEIGHT_OVERLAY*sizeof(pixel), MALLOC_CAP_DEFAULT);
     if (!overlay.Data){ printf("malloc overlay failed!\n"); return 0; }
@@ -125,7 +356,7 @@ void TrashVideo(void){
 }
  
 void clearScreen(void) {
-    ili9341_write_frame_msx(0,0,WIDTH_OVERLAY,HEIGHT_OVERLAY, NULL, XPal[BGColor]);
+    VideoTaskCommand = 1;
 }
 void clearOverlay(void) {
     memset(overlay.Data,0,WIDTH_OVERLAY*HEIGHT_OVERLAY*sizeof(pixel));
@@ -1027,6 +1258,46 @@ void RefreshLine7(register byte Y)
   }
 
 }
+////////////////// virtual keyboard / cursor /////////////////////
+int getKey(int pressX, int pressY) {
+    for (int i = 0; i < keyPositions.keys; i++){
+        if (keyPositions.kyPos[i].x1<=pressX && keyPositions.kyPos[i].x2>=pressX && keyPositions.kyPos[i].y1<=pressY && keyPositions.kyPos[i].y2>=pressY){
+            return keyPositions.kyPos[i].key;
+        }
+    }
+    return -1;
+}
+void doFlipScreen() {
+    if (flipScreen) flipScreen = 0; else flipScreen = 1;
+}
+int mousePress() {
+    return getKey(cursorX + 4, cursorY);
+}
+void moveCursor(int x, int y) {
+    cursorX += x;
+    cursorY += y;
+    if (cursorX < 2) cursorX = 2;
+    if (cursorY < 2) cursorY = 2;
+    if (cursorX > WIDTH_OVERLAY - CURSOR_MAX_WIDTH) cursorX = WIDTH_OVERLAY - CURSOR_MAX_WIDTH;
+    if (cursorY > HEIGHT_OVERLAY/2 - CURSOR_MAX_HEIGHT) cursorY = HEIGHT_OVERLAY/2 - CURSOR_MAX_HEIGHT;
+    
+    
+    int k = getKey(cursorX + 4, cursorY);
+    if (k == -1) cursorType = CURSOR_ARROW; else cursorType = CURSOR_HAND;
+    
+    reDrawCursor = 1;
+}
+void showVirtualKeyboard() {
+    if (showKeyboard) return;
+    showKeyboard = 1;
+    reDrawKeyboard = 1;
+    
+}
+void hideVirtualKeyboard() {
+    showKeyboard = 0;
+    reDrawKeyboard = 0;
+    flipScreen = 0;
+}
 
 //////////////////// Overlay Menu functions /////////////////////////
 
@@ -1040,3 +1311,7 @@ int ShowVideo(void) {
     return 0;
 }
 
+int DrawuGui(uint16_t* uGuiMenu, int y) {
+    ili9341_write_frame_rectangleLE(0,y,WIDTH_OVERLAY,HEIGHT_OVERLAY - y, uGuiMenu);
+    return 0;
+}
