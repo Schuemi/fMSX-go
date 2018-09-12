@@ -3,7 +3,7 @@ fMSX Port to ODROID-GO
 
 to build it, please download fMSX from here: https://fms.komkon.org/fMSX/
 
-But there is also a precompiled Firmware file here: https://github.com/Schuemi/fMSX-go/releases/tag/20180816
+But there is also a precompiled Firmware file here: https://github.com/Schuemi/fMSX-go/tags
 
 Please create these directories on your SD Card manually:
 ```
