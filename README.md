@@ -39,6 +39,7 @@ You can open a virtual keyboard by pressing an hold the "A" button ans then the 
 
 The next things I'm planning are:
 
+- resolve sound issues in some games
 - resolve some speed and color issues with some games
 - complete the new menu
 - implement preview screenshots of the games
