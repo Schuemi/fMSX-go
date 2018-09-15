@@ -27,7 +27,14 @@ START = 2
 A = JST_FIREA
 B = JST_FIREB
 ```
-You can have for every game a custom mapping file. Put the file in /odroid/data/msx. It schould have the name [GAME].ini. For example if your gamefiles name is GTA3.rom the keyfilename has to be GTA3.ini.
+The possible Key Mappings are:
+JST_UP, JST_RIGHT, JST_DOWN, JST_LEFT, JST_FIREA, JST_FIREB, KBD_SPACE, KBD_F1, KBD_F2, KBD_F3, KBD_F3, KBD_F4, KBD_F5, KBD_LEFT, KBD_UP, KBD_DOWN, KBD_SHIFT, KBD_CONTROL, KBD_GRAPH, KBD_BS, KBD_TAB, KBD_CAPSLOCK, KBD_SELECT, KBD_HOME, KBD_ENTER, KBD_INSERT, KBD_COUNTRY, KBD_STOP, KBD_NUMPAD0 - KBD_NUMPAD9, KBD_ESCAPE and a single digit or a single letter.
+
+You can use for every game a custom mapping file. Put the file in /odroid/data/msx. It schould have the name [GAME].ini. For example if your gamefiles name is GTA3.rom the keyfilename has to be GTA3.ini.
+
+Also you can have a default setting. Go into /odroid/data/msx, if you have ever started fMSX there should be a file called "config.ini". In this file you can add your defualt keymapping the same way you would add a key mapping for a game.
+
+
 
 Gamesaves are saved in the same directory as the game itself. It is calles [GAME].sav and is compatible to every other fMSX port. So you can continue playing on pc, playstation etc...
 
