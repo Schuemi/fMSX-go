@@ -88,6 +88,7 @@ void doFlipScreen();
 ///////////////////// FILES ////////////////////////////////////
 
 void loadKeyMappingFromGame(const char* gameFileName);
+char LoadKeyMapping(char* KeyFile);
 
 int initFiles();
 char* cutExtension(char* file);

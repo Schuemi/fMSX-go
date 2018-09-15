@@ -38,7 +38,7 @@
 
 #include <string.h>
 
-#define AUDIO_BUFFER_SAMPLES 256
+#define AUDIO_BUFFER_SAMPLES 128
 
 
 //#define NO_SOUND

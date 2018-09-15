@@ -28,6 +28,7 @@
  * Created on 16. August 2018, 14:11
  */
 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -46,9 +47,12 @@
 #include "MSX.h"
 #include "EMULib.h"
 
+#define VERBOSE_VIDEO
+#define WITH_OVERLAY
+
 int cursorX = 10;
 int cursorY = 10;
-
+byte* ZBuf;
 
 uint16_t lastBGColor = 0;
 enum cursorTypeEnum{
@@ -179,7 +183,9 @@ int backGroundWidth = -1;
 
 QueueHandle_t videoQueue;
 uint16_t VideoTaskCommand = 1;
-static uint16_t BPal[256],XPal[80],XPal0; 
+static uint16_t* BPal;
+static uint16_t* XPal;
+static XPal0; 
 Image overlay;
 uint32_t FirstLine = 18;
 uint16_t lastLine = 0;
@@ -190,8 +196,7 @@ char reDrawCursor = 0;
 char flipScreen = 0;
 
 //////////////////////////////////////////////////////7
-
-
+ 
 
 void videoTask(void* arg)
 {
@@ -285,8 +290,9 @@ void videoTask(void* arg)
     
     xQueueReceive(videoQueue, &param, portMAX_DELAY);
   }
-
+#ifdef VERBOSE_VIDEO
   printf("videoTask: exiting.\n");
+#endif
   
 
   vTaskDelete(NULL);
@@ -299,6 +305,11 @@ void videoTask(void* arg)
 
 int InitVideo(void) {
     videoQueue = xQueueCreate(1, sizeof(uint16_t*));
+    
+    BPal = heap_caps_malloc(256*sizeof(uint16_t), MALLOC_CAP_DMA | MALLOC_CAP_8BIT);
+    XPal = heap_caps_malloc(80*sizeof(uint16_t), MALLOC_CAP_DMA | MALLOC_CAP_8BIT);
+    ZBuf = heap_caps_malloc(320, MALLOC_CAP_DMA | MALLOC_CAP_8BIT);
+    
     for (int i = 0; i < 2; i++) {
          framebuffer[i] = (pixel*)heap_caps_malloc(WIDTH*(HEIGHT/2)*sizeof(pixel), MALLOC_CAP_DMA | MALLOC_CAP_8BIT);
          memset(framebuffer[i], 0, WIDTH*(HEIGHT/2)*sizeof(pixel));
@@ -310,11 +321,10 @@ int InitVideo(void) {
     cursorBackGround= (pixel*)heap_caps_malloc(CURSOR_MAX_WIDTH*CURSOR_MAX_HEIGHT*sizeof(pixel), MALLOC_CAP_DMA | MALLOC_CAP_8BIT);
     if (!cursorBackGround){ printf("malloc cursorBackGround failed!\n"); return 0; }
     
-    /* Menu overlay*/
+#ifdef WITH_OVERLAY
+     /* Menu overlay*/
     overlay.Data = (pixel*)heap_caps_malloc(WIDTH_OVERLAY*HEIGHT_OVERLAY*sizeof(pixel), MALLOC_CAP_DEFAULT);
     if (!overlay.Data){ printf("malloc overlay failed!\n"); return 0; }
-    
-   
     
     memset(overlay.Data, 0, WIDTH_OVERLAY*HEIGHT_OVERLAY*sizeof(pixel));
     overlay.Cropped = 1;
@@ -323,7 +333,7 @@ int InitVideo(void) {
     overlay.D = sizeof(pixel)<<3;
     overlay.L = WIDTH_OVERLAY;
     SetVideo(&overlay,0,0,WIDTH_OVERLAY,HEIGHT_OVERLAY);
-    
+#endif   
     
     /* Reset the palette */
     for(int J=0;J<16;J++) XPal[J]=255*J;
@@ -400,7 +410,9 @@ pixel YJKColor(register int Y,register int J,register int K)
 /************************************ TO BE WRITTEN BY USER **/
 
 int64_t mtimer;
+#ifdef VERBOSE_VIDEO
 char scounter = 0; 
+#endif
 
 void RefreshScreen(void) {
    
@@ -412,13 +424,16 @@ void RefreshScreen(void) {
         }
     }
    xQueueSend(videoQueue, (void*)&VideoTaskCommand, portMAX_DELAY);
+  #ifdef VERBOSE_VIDEO
    scounter++;
     if (scounter == 10) {
-        printf("%llu\n", (esp_timer_get_time() - mtimer) / 10);
+       // printf("%llu fps\n", 1000000 / ((esp_timer_get_time() - mtimer) / 10));
+        printf("%llu Screen %d\n", (esp_timer_get_time() - mtimer) / 10, ScrMode);
         mtimer = esp_timer_get_time();
         scounter = 0;
+
     }
-    
+    #endif
 }
 
 /** ClearLine() **********************************************/
@@ -976,7 +991,7 @@ void RefreshLine4(register byte Y)
   register byte K,X,C,*T,*R;
   register int I,J;
   byte line = Y;
-  byte ZBuf[320];
+
 
   P=GetBuffer(Y,XPal[BGColor], 4);
   if(!P) return;
@@ -1020,7 +1035,7 @@ void RefreshLine5(register byte Y)
 {
   register pixel *P;
   register byte I,X,*T,*R;
-  byte ZBuf[320];
+  
 
   P=GetBuffer(Y,XPal[BGColor], 5);
   if(!P) return;
@@ -1070,7 +1085,7 @@ void RefreshLine8(register byte Y)
   };
   register pixel *P;
   register byte C,X,*T,*R;
-  byte ZBuf[320];
+
 
   P=GetBuffer(Y,BPal[VDP[7]], 8);
   if(!P) return;
@@ -1107,8 +1122,8 @@ void RefreshLine10(register byte Y)
     register pixel *P;
   register byte C,X,*T,*R;
   register int J,K;
-  byte ZBuf[320];
-  byte line = Y;
+
+ 
   P=GetBuffer(Y,BPal[VDP[7]], 10);
   if(!P) return;
 
@@ -1142,6 +1157,7 @@ void RefreshLine10(register byte Y)
 
 }
 
+
 /** RefreshLine12() ******************************************/
 /** Refresh line Y (0..191/211) of SCREEN12, including      **/
 /** sprites in this line.                                   **/
@@ -1152,7 +1168,7 @@ void RefreshLine12(register byte Y)
     register pixel *P;
   register byte C,X,*T,*R;
   register int J,K;
-  byte ZBuf[320];
+
 
   P=GetBuffer(Y,BPal[VDP[7]], 12);
   if(!P) return;
@@ -1194,7 +1210,7 @@ void RefreshLine12(register byte Y)
 void RefreshLine6(byte Y) {
 register pixel *P;
   register byte X,*T,*R,C;
-  byte ZBuf[304];
+
 
   P=GetBuffer(Y,XPal[BGColor&0x03], 6);
   if(!P) return;
@@ -1231,7 +1247,7 @@ void RefreshLine7(register byte Y)
 {
   register pixel *P;
   register byte C,X,*T,*R;
-  byte ZBuf[304];
+
 
   P=GetBuffer(Y,XPal[BGColor], 7);
   if(!P) return;

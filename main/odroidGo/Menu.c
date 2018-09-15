@@ -22,7 +22,7 @@
 #include "minini.h"
 
 #define MAX_OBJECTS 6
-#define MAX_OBJECTS_VIRTUAL_KEYBOARD 64
+
 
 #define MENU_TEXTBOX_ID 1
 #define FILES_TEXTBOX_ID 2 
@@ -118,8 +118,7 @@ void odroidFmsxGUI_initMenu() {
    UG_TextboxSetAlignment(&window, MENU_TEXTBOX_ID, ALIGN_TOP_LEFT);
    UG_TextboxSetForeColor(&window, MENU_TEXTBOX_ID, C_BLACK);
    UG_TextboxSetFont ( &window , MENU_TEXTBOX_ID, &FONT_8X8 ) ;
-   
-   
+
    
    UG_TextboxShow(&window, MENU_TEXTBOX_ID);
    UG_WindowShow(&window);
@@ -485,6 +484,7 @@ void odroidFmsxGUI_showMenu() {
                case 3:
                    for(int J=0;J<MAXSLOTS;++J) LoadCart(0,J,0);
                    ini_puts("FMSX", "LASTGAME", "", FMSX_CONFIG_FILE);
+                   LoadKeyMapping("/sd/odroid/data/msx/config.ini");
                    stopMenu = true;
                    break;
                case 4:

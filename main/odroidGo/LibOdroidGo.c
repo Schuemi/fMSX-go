@@ -86,37 +86,77 @@ void SetKeyMapping(int Key, char* mappingString) {
     if (!strcmp(mappingString, "JST_LEFT")) keyMapping[Key] = JST_LEFT;
     if (!strcmp(mappingString, "JST_FIREA")) keyMapping[Key] = JST_FIREA;
     if (!strcmp(mappingString, "JST_FIREB")) keyMapping[Key] = JST_FIREB;
+    
+    if (!strcmp(mappingString, "KBD_SPACE")) keyMapping[Key] = KBD_SPACE << 8; 
+    
+    if (!strcmp(mappingString, "KBD_F1")) keyMapping[Key] = KBD_F1 << 8; 
+    if (!strcmp(mappingString, "KBD_F2")) keyMapping[Key] = KBD_F2 << 8; 
+    if (!strcmp(mappingString, "KBD_F3")) keyMapping[Key] = KBD_F3 << 8; 
+    if (!strcmp(mappingString, "KBD_F4")) keyMapping[Key] = KBD_F4 << 8; 
+    if (!strcmp(mappingString, "KBD_F5")) keyMapping[Key] = KBD_F5 << 8; 
+    
+    if (!strcmp(mappingString, "KBD_LEFT")) keyMapping[Key] = KBD_LEFT << 8; 
+    if (!strcmp(mappingString, "KBD_UP")) keyMapping[Key] = KBD_UP << 8; 
+    if (!strcmp(mappingString, "KBD_DOWN")) keyMapping[Key] = KBD_DOWN << 8; 
+    if (!strcmp(mappingString, "KBD_SHIFT")) keyMapping[Key] = KBD_SHIFT << 8; 
+    if (!strcmp(mappingString, "KBD_CONTROL")) keyMapping[Key] = KBD_CONTROL << 8; 
+    if (!strcmp(mappingString, "KBD_GRAPH")) keyMapping[Key] = KBD_GRAPH << 8; 
+    if (!strcmp(mappingString, "KBD_BS")) keyMapping[Key] = KBD_BS << 8; 
+    if (!strcmp(mappingString, "KBD_TAB")) keyMapping[Key] = KBD_TAB << 8; 
+    if (!strcmp(mappingString, "KBD_CAPSLOCK")) keyMapping[Key] = KBD_CAPSLOCK << 8; 
+    if (!strcmp(mappingString, "KBD_SELECT")) keyMapping[Key] = KBD_SELECT << 8; 
+    if (!strcmp(mappingString, "KBD_HOME")) keyMapping[Key] = KBD_HOME << 8; 
+    if (!strcmp(mappingString, "KBD_ENTER")) keyMapping[Key] = KBD_ENTER << 8; 
+    if (!strcmp(mappingString, "KBD_INSERT")) keyMapping[Key] = KBD_INSERT << 8; 
+    if (!strcmp(mappingString, "KBD_COUNTRY")) keyMapping[Key] = KBD_COUNTRY << 8; 
+    if (!strcmp(mappingString, "KBD_STOP")) keyMapping[Key] = KBD_STOP << 8; 
+    
+    if (!strcmp(mappingString, "KBD_NUMPAD0")) keyMapping[Key] = KBD_NUMPAD0 << 8; 
+    if (!strcmp(mappingString, "KBD_NUMPAD1")) keyMapping[Key] = KBD_NUMPAD1 << 8; 
+    if (!strcmp(mappingString, "KBD_NUMPAD2")) keyMapping[Key] = KBD_NUMPAD2 << 8; 
+    if (!strcmp(mappingString, "KBD_NUMPAD3")) keyMapping[Key] = KBD_NUMPAD3 << 8; 
+    if (!strcmp(mappingString, "KBD_NUMPAD4")) keyMapping[Key] = KBD_NUMPAD4 << 8; 
+    if (!strcmp(mappingString, "KBD_NUMPAD5")) keyMapping[Key] = KBD_NUMPAD5 << 8; 
+    if (!strcmp(mappingString, "KBD_NUMPAD6")) keyMapping[Key] = KBD_NUMPAD6 << 8; 
+    if (!strcmp(mappingString, "KBD_NUMPAD7")) keyMapping[Key] = KBD_NUMPAD7 << 8; 
+    if (!strcmp(mappingString, "KBD_NUMPAD8")) keyMapping[Key] = KBD_NUMPAD8 << 8; 
+    if (!strcmp(mappingString, "KBD_NUMPAD9")) keyMapping[Key] = KBD_NUMPAD9 << 8; 
+    
+    if (!strcmp(mappingString, "KBD_ESCAPE")) keyMapping[Key] = KBD_ESCAPE << 8; 
+    
+    
+    
     if (keyMapping[Key] == -1) {
         keyMapping[Key] = mappingString[0] << 8;
     }
 }
 char LoadKeyMapping(char* KeyFile) {
-    //long  ini_getl(const "KEYMAPPING", "UP", long DefValue, const mTCHAR *Filename);
+   
     char buffer[16];
     int res;
-   
-    res = ini_gets("KEYMAPPING", "UP", "JST_UP", buffer, 16, KeyFile);
+
+    res = ini_gets("KEYMAPPING", "UP", "", buffer, 16, KeyFile);
     if (res) SetKeyMapping(ODROID_INPUT_UP, buffer);
     
-    res = ini_gets("KEYMAPPING", "RIGHT", "JST_RIGHT", buffer, 16, KeyFile);
+    res = ini_gets("KEYMAPPING", "RIGHT", "", buffer, 16, KeyFile);
     if (res) SetKeyMapping(ODROID_INPUT_RIGHT, buffer);
     
-    res = ini_gets("KEYMAPPING", "DOWN", "JST_DOWN", buffer, 16, KeyFile);
+    res = ini_gets("KEYMAPPING", "DOWN", "", buffer, 16, KeyFile);
     if (res) SetKeyMapping(ODROID_INPUT_DOWN, buffer);
     
-    res = ini_gets("KEYMAPPING", "LEFT", "JST_LEFT", buffer, 16, KeyFile);
+    res = ini_gets("KEYMAPPING", "LEFT", "", buffer, 16, KeyFile);
     if (res) SetKeyMapping(ODROID_INPUT_LEFT, buffer);
     
-    res = ini_gets("KEYMAPPING", "SELECT", "2", buffer, 16, KeyFile);
+    res = ini_gets("KEYMAPPING", "SELECT", "", buffer, 16, KeyFile);
     if (res) SetKeyMapping(ODROID_INPUT_SELECT, buffer);
     
-    res = ini_gets("KEYMAPPING", "START", "1", buffer, 16, KeyFile);
+    res = ini_gets("KEYMAPPING", "START", "", buffer, 16, KeyFile);
     if (res) SetKeyMapping(ODROID_INPUT_START, buffer);
     
-    res = ini_gets("KEYMAPPING", "A", "JST_FIREA", buffer, 16, KeyFile);
+    res = ini_gets("KEYMAPPING", "A", "", buffer, 16, KeyFile);
     if (res) SetKeyMapping(ODROID_INPUT_A, buffer);
     
-    res = ini_gets("KEYMAPPING", "B", "JST_FIREB", buffer, 16, KeyFile);
+    res = ini_gets("KEYMAPPING", "B", "", buffer, 16, KeyFile);
     if (res) SetKeyMapping(ODROID_INPUT_B, buffer);
     
       
@@ -133,7 +173,6 @@ void loadKeyMappingFromGame(const char* gameFileName) {
     strncpy(keyBoardFile, filename, 256);
     keyBoardFile = cutExtension(keyBoardFile);
     snprintf(keyBoardFileFullPath, 612, "/sd/odroid/data/msx/%s.ini", keyBoardFile);
-    setDefaultKeymapping();
     LoadKeyMapping(keyBoardFileFullPath);
     free(keyBoardFile);
     free(keyBoardFileFullPath);
@@ -144,14 +183,17 @@ void loadKeyMappingFromGame(const char* gameFileName) {
 
 int InitMachine(void){ 
     
-    
+ 
     lastGame = malloc(1024);
     initFiles();
+    
     setDefaultKeymapping();
-
+    LoadKeyMapping("/sd/odroid/data/msx/config.ini");
+    
     InitVideo();
     odroidFmsxGUI_initMenu();
-
+   
+    
     int res = ini_gets("FMSX", "LASTGAME", "", lastGame, 1024, FMSX_CONFIG_FILE);
     if (res) {
         loadKeyMappingFromGame(lastGame);
@@ -162,7 +204,7 @@ int InitMachine(void){
         odroidFmsxGUI_setLastLoadedFile(lastGame);
 
     }
-
+    
     InitSound(AUDIO_SAMPLE_RATE, 0);
    
 
@@ -353,9 +395,6 @@ unsigned int Mouse(byte N) {return 0;}
 //byte DiskPresent(byte ID) {return 0;}
 //byte DiskRead(byte ID,byte *Buf,int N) {return 0;}
 //byte DiskWrite(byte ID,const byte *Buf,int N) {return 0;}
-
-
-
 
 
 

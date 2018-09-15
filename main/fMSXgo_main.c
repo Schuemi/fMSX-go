@@ -56,7 +56,35 @@ const char* SD_BASE_PATH = "/sd";
 
 //mkfw.exe "fMSX" tile.raw 0 16 2097152 fMSX goMSX.bin
 void app_main(void) {
-  
+    //diese nops sond dafür da, den fMSX code zu verschieben und zu schauen, wo er am besteln liegt um schnell zu sein.
+    //AAVideo liegt derzeit noch hinter LibOdroidGo.c, daher beeinfussen änderungen den auch. vielleicht AAVideo in ein eigenes verzeichnis über odroidGo?
+    /*    
+    
+       __asm__ (
+               "nop\n"
+               "nop\n"
+               "nop\n"
+               "nop\n"
+               "nop\n"
+               "nop\n"
+               "nop\n"
+               "nop\n"
+                "nop\n"
+               "nop\n"
+               "nop\n"
+               "nop\n"
+               "nop\n"
+               "nop\n"
+               "nop\n"
+               "nop\n"
+               "nop\n"
+               "nop\n"
+               "nop\n"
+               "nop\n"
+               "nop\n"
+               "nop"
+            );*/
+       
   nvs_flash_init();
  
    uint8_t initOkay;
