@@ -44,9 +44,13 @@
 #include <stdbool.h>
 
 ////////////// Menu //////////////////
+typedef enum  {
+    MENU_ACTION_NONE,
+    MENU_ACTION_CHANGED_AUDIO_TYPE
+} MENU_ACTION;
 
 void odroidFmsxGUI_initMenu();
-void odroidFmsxGUI_showMenu();
+MENU_ACTION odroidFmsxGUI_showMenu();
 void odroidFmsxGUI_setLastLoadedFile(const char* file);
 void odroidFmsxGUI_msgBox(const char* title, const char* msg, char waitKey);
 
@@ -107,10 +111,19 @@ long _telldir(DIR* pdir);
 int _fclose(FILE* file);
 
 
+/////////////// get cardridgeInfo from XML file ////////////////////
+struct cardInfo {
+    char* cardName;
+    int mapperType;
+    char* year;
+    char* company;
+    char* country;
+        
+};
+struct cardInfo* getCardInfo(const char* fileName);
 
 
 
-/* GIMP RGB C-Source image dump (msx_kb.c) */
 
 /* GIMP RGB C-Source image dump (msx_kb.c) */
 

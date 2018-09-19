@@ -339,14 +339,21 @@ int InitVideo(void) {
     for(int J=0;J<16;J++) XPal[J]=255*J;
     XPal0=Black;
     
-     /* Set SCREEN8 colors */
-    for(int J=0;J<64;J++)
-    {
-      int I=(J&0x03)+(J&0x0C)*16+(J&0x30)/2;
-      XPal[J+16]=J*I;
-      BPal[I]=BPal[I|0x04]=BPal[I|0x20]=BPal[I|0x24]=XPal[J+16];
-    }
-    XPal[15] = Black;
+    
+    /* Create SCREEN8 palette (GGGRRRBB) */
+      for(int J=0;J<256;J++) {
+        uint16_t r = (0xFF / 7) * (((J&0x1C)>> 2));
+        uint16_t g = (0xFF / 7) * (((J&0xE0)>> 5));
+        uint16_t b = J & 0x03;
+        if (b == 1) b = 73;
+        if (b == 2) b = 146;
+        if (b == 3) b = 255;
+        
+        BPal[J]=ILI9341_COLOR(r,g,b);
+        BPal[J]=( BPal[J] << 8) | (( BPal[J] >> 8) & 0xFF);
+        
+      }
+      XPal[15] = Black;
     
      // clear screen
     ili9341_write_frame_msx(0,0,WIDTH_OVERLAY,HEIGHT_OVERLAY, NULL, XPal[BGColor]);

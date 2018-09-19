@@ -51,20 +51,20 @@ sample *currentAudioBufferSend;
 uint16_t audioBufferSize;
 uint16_t audioBufferSizeSend;
 QueueHandle_t audioQueue;
-
+ODROID_AUDIO_SINK sink = ODROID_AUDIO_SINK_NONE;
 
 int volLevel;
-
+char stop = 0;
 void audioTask(void* arg)
 {
   // sound
   uint16_t* param;
 
-  while(1)
+  while(!stop)
   {
     xQueuePeek(audioQueue, &param, portMAX_DELAY);
 #ifndef NO_SOUND
-   odroid_audio_submit(currentAudioBufferSend, audioBufferSizeSend/2);
+   if (! stop) odroid_audio_submit(currentAudioBufferSend, audioBufferSizeSend/2);
 #endif
     xQueueReceive(audioQueue, &param, portMAX_DELAY);
   }
@@ -74,11 +74,18 @@ void audioTask(void* arg)
 
   vTaskDelete(NULL);
 
-  while (1) {}
+  
 }
 
 
 unsigned int InitAudio(unsigned int Rate,unsigned int Latency) {
+    
+    stop = 0;
+    char buf[3];
+    
+    if (sink == ODROID_AUDIO_SINK_NONE) ini_gets("FMSX", "DAC", "0", buf, 3, FMSX_CONFIG_FILE);
+    
+    if (atoi(buf)) sink = ODROID_AUDIO_SINK_DAC; else sink = ODROID_AUDIO_SINK_SPEAKER;
     
     streamAudioBuffer1 = (sample*)heap_caps_malloc(AUDIO_BUFFER_SAMPLES*sizeof(sample)*2, MALLOC_CAP_DMA | MALLOC_CAP_8BIT);
     streamAudioBuffer2 = (sample*)heap_caps_malloc(AUDIO_BUFFER_SAMPLES*sizeof(sample)*2, MALLOC_CAP_DMA | MALLOC_CAP_8BIT);
@@ -89,7 +96,7 @@ unsigned int InitAudio(unsigned int Rate,unsigned int Latency) {
     
     audioQueue = xQueueCreate(1, sizeof(uint16_t*));
     
-    odroid_audio_init(ODROID_AUDIO_SINK_SPEAKER, Rate);
+    odroid_audio_init(sink, Rate);
     volLevel = ini_getl("FMSX", "VOLUME", ODROID_VOLUME_LEVEL1, FMSX_CONFIG_FILE);
     
     if (volLevel >= ODROID_VOLUME_LEVEL_COUNT || volLevel < ODROID_VOLUME_LEVEL0) volLevel = ODROID_VOLUME_LEVEL1;
@@ -114,8 +121,9 @@ void audio_volume_set_change() {
 
 void pause_audio() {
     void* tempPtr = (void*)0x1234;
+    stop=1;
     xQueueSend(audioQueue, &tempPtr, portMAX_DELAY); // to wait until sound was send
-    odroid_audio_terminate();
+    
     TrashAudio();
 }
 

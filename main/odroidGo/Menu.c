@@ -35,6 +35,7 @@
 
 
 
+
 typedef unsigned short pixelp;
 
 
@@ -68,11 +69,11 @@ char* lastOpenedFileFullPath;
 int position = 0;
 int selPosition = 0;
    
-#define MENU_ITEMS 10
+#define MENU_ITEMS 12
 static const struct {
     const char* menuItem[MENU_ITEMS];
     
-} menuItems = {
+} menuItems = {   
    "Load file\n",
    "Save state\n",
    "\n",
@@ -81,6 +82,8 @@ static const struct {
    "\n",
    "fMSX Menu\n",
    "Reset\n",
+   "\n",
+   "Audio output\n",
    "\n",
    "About\n",
    
@@ -98,14 +101,14 @@ void window_callback( UG_MESSAGE* msg ) {
 void odroidFmsxGUI_initMenu() {
    
   
-   pixelBuffer = (pixelp*)malloc(m_width*m_height*sizeof(pixelp));
+   pixelBuffer = (pixelp*)heap_caps_malloc(m_width*m_height*sizeof(pixelp), MALLOC_CAP_SPIRAM);
    memset(pixelBuffer, 0, m_width*m_height*sizeof(pixelp));
    
-   selectedFile = (char*)malloc(FILES_MAX_LENGTH_NAME+1);
+   selectedFile = (char*)heap_caps_malloc(FILES_MAX_LENGTH_NAME+1, MALLOC_CAP_SPIRAM);
    lastOpenedFileFullPath = (char*)malloc(1024);
    lastOpenedFileFullPath[0] = 0;
    
-   menuTxt = (char*)malloc(1000);
+   menuTxt = (char*)heap_caps_malloc(1000, MALLOC_CAP_SPIRAM);
    
    UG_Init(&gui,pixelSet,m_width, m_height);
    
@@ -146,6 +149,7 @@ int odroidFmsxGUI_getKey() {
         if (out_state.values[ODROID_INPUT_LEFT]) lastPressedKey = ODROID_INPUT_LEFT;
         if (out_state.values[ODROID_INPUT_RIGHT]) lastPressedKey = ODROID_INPUT_RIGHT;
         if (out_state.values[ODROID_INPUT_A]) lastPressedKey = ODROID_INPUT_A;
+        if (out_state.values[ODROID_INPUT_B]) lastPressedKey = ODROID_INPUT_B;
         if (out_state.values[ODROID_INPUT_MENU]) lastPressedKey = ODROID_INPUT_MENU;
     }
     return lastPressedKey;
@@ -176,12 +180,12 @@ const char* odroidFmsxGUI_chooseFile(const char *Ext) {
    char* shownFiles[FILES_MAX_ROWS];
    
    
-   txtFiles = malloc(FILES_MAX_ROWS*(FILES_MAX_LENGTH + 5) + 1);
+   txtFiles = heap_caps_malloc(FILES_MAX_ROWS*(FILES_MAX_LENGTH + 5) + 1, MALLOC_CAP_SPIRAM);
    for (int i = 0; i < FILES_MAX_ROWS; i++) {
-       shownFiles[i] = malloc(FILES_MAX_LENGTH_NAME+1);
+       shownFiles[i] = heap_caps_malloc(FILES_MAX_LENGTH_NAME+1, MALLOC_CAP_SPIRAM);
    }
    
-   Buf = malloc(256);
+   Buf = (char*)heap_caps_malloc(256, MALLOC_CAP_SPIRAM);
    char* txtFilesPosition;
    
    
@@ -314,12 +318,24 @@ const char* odroidFmsxGUI_chooseFile(const char *Ext) {
             free(Buf);
             UG_TextboxDelete(&fileWindow, FILES_TEXTBOX_ID);
             UG_WindowDelete(&fileWindow);
-            
             chdir(shownFiles[selPosition - position]);
+            selPosition = 0;
             for (int i = 0; i < FILES_MAX_ROWS; i++) free(shownFiles[i]);
             closedir(D);
             return odroidFmsxGUI_chooseFile(Ext);
          }
+        if(keyNumPressed == ODROID_INPUT_B) {
+            free(txtFiles);
+            free(Buf);
+            UG_TextboxDelete(&fileWindow, FILES_TEXTBOX_ID);
+            UG_WindowDelete(&fileWindow);
+            chdir("..");
+            selPosition = 0;
+            for (int i = 0; i < FILES_MAX_ROWS; i++) free(shownFiles[i]);
+            closedir(D);
+            return odroidFmsxGUI_chooseFile(Ext);
+            
+        }
          
 
         } while(keyNumPressed != ODROID_INPUT_A && keyNumPressed != ODROID_INPUT_MENU);
@@ -330,6 +346,7 @@ const char* odroidFmsxGUI_chooseFile(const char *Ext) {
    if(keyNumPressed == ODROID_INPUT_A) {
        strncpy(selectedFile, shownFiles[selPosition - position], FILES_MAX_LENGTH_NAME);
    }
+   
    free(txtFiles);
    free(Buf);
    for (int i = 0; i < FILES_MAX_ROWS; i++) free(shownFiles[i]);
@@ -405,11 +422,29 @@ void odroidFmsxGUI_msgBox(const char* title, const char* msg, char waitKey) {
   
    
 }
-void odroidFmsxGUI_showMenu() {
+char saveState(const char* fileName) {
+    char res = 1;
+    if (! fileName) {
+        char* stateFileName = (char*)heap_caps_malloc(1024, MALLOC_CAP_SPIRAM);
+        char* stateFileNameF = (char*)heap_caps_malloc(1024, MALLOC_CAP_SPIRAM);
+        strncpy(stateFileName, lastOpenedFileFullPath, 1024);
+        cutExtension(stateFileName);
+        snprintf(stateFileNameF, 1024, "%s.sta", stateFileName);
+        if (!SaveSTA(stateFileNameF)){
+            res = 0;
+        }
+        free(stateFileName);
+        free(stateFileNameF);
+    } else {
+        SaveSTA(fileName);
+    }
+    return res;
+}
+MENU_ACTION odroidFmsxGUI_showMenu() {
    
    char stopMenu = 0;
    odroidFmsxGUI_selectMenuItem(currentSelectedItem);
-   
+   MENU_ACTION ret = MENU_ACTION_NONE;
    
    
    
@@ -424,6 +459,7 @@ void odroidFmsxGUI_showMenu() {
 
     do {
        int c = 0;
+       char buf[3];
        UG_WindowShow(&window); // force a window update
        UG_Update();
        DrawuGui(pixelBuffer, 0);
@@ -454,10 +490,11 @@ void odroidFmsxGUI_showMenu() {
                    odroidFmsxGUI_msgBox("Please wait...", "Please wait while loading", 0);
                    if (lastSelectedFile != NULL) {
                        if (LoadFile(lastSelectedFile)){
-                           getFullPath(lastOpenedFileFullPath, lastSelectedFile, 1024);
-                           ini_puts("FMSX", "LASTGAME", lastOpenedFileFullPath, FMSX_CONFIG_FILE);
-                           loadKeyMappingFromGame(lastSelectedFile);
-                       } else lastOpenedFileFullPath[0] = 0;
+                            getFullPath(lastOpenedFileFullPath, lastSelectedFile, 1024);
+                            ini_puts("FMSX", "LASTGAME", lastOpenedFileFullPath, FMSX_CONFIG_FILE);
+                            loadKeyMappingFromGame(lastSelectedFile);
+                        } else lastOpenedFileFullPath[0] = 0;
+                       
                        stopMenu = true;
                    }
                    break; 
@@ -466,16 +503,9 @@ void odroidFmsxGUI_showMenu() {
                case 1:
                    if (lastOpenedFileFullPath[0] != 0) {
                         odroidFmsxGUI_msgBox("Please wait...", "Please wait while saving", 0);
-                        char* stateFileName = malloc(1024);
-                        char* stateFileNameF = malloc(1024);
-                        strncpy(stateFileName, lastOpenedFileFullPath, 1024);
-                        cutExtension(stateFileName);
-                        snprintf(stateFileNameF, 1024, "%s.sta", stateFileName);
-                        if (!SaveSTA(stateFileNameF)){
+                        if (!saveState(NULL)) {
                             odroidFmsxGUI_msgBox("Error", "Could not save state", 1);
                         }
-                        free(stateFileName);
-                        free(stateFileNameF);
                    }
                    stopMenu = true;
                    break;
@@ -501,6 +531,18 @@ void odroidFmsxGUI_showMenu() {
                    stopMenu = true;
                    break;
                case 9:
+                   
+                   ini_gets("FMSX", "DAC", "0", buf, 3, FMSX_CONFIG_FILE);
+                   if (! atoi(buf)){
+                       ini_puts("FMSX", "DAC", "1", FMSX_CONFIG_FILE);
+                       odroidFmsxGUI_msgBox("Audio", " Audio is now: DAC\n\nPlease turn the Device OFF and\nON again to take effect.", 1);
+                   }else {
+                       ini_puts("FMSX", "DAC", "0", FMSX_CONFIG_FILE);
+                       odroidFmsxGUI_msgBox("Audio", " Audio is now: Speaker\n\nPlease turn the Device OFF and\nON again to take effect.", 1);
+                   }
+                   ret = MENU_ACTION_CHANGED_AUDIO_TYPE;
+                   break;
+               case 11:
                    odroidFmsxGUI_msgBox("About", " \nfMSX\n\n by Marat Fayzullin\n\n ported by Jan P. Schuemann\n\nThanks to the ODROID-GO community\n\nHave fun!\n ", 1);
                break;
            };
@@ -510,6 +552,7 @@ void odroidFmsxGUI_showMenu() {
        
    }while (!stopMenu);
    
+   return ret;
     
 }
 

@@ -46,6 +46,7 @@
 #include "freertos/queue.h"
 #include "freertos/task.h"
 
+#include "utils.h"
 
 
 int keyMapping[ODROID_INPUT_MAX];
@@ -98,6 +99,7 @@ void SetKeyMapping(int Key, char* mappingString) {
     if (!strcmp(mappingString, "KBD_LEFT")) keyMapping[Key] = KBD_LEFT << 8; 
     if (!strcmp(mappingString, "KBD_UP")) keyMapping[Key] = KBD_UP << 8; 
     if (!strcmp(mappingString, "KBD_DOWN")) keyMapping[Key] = KBD_DOWN << 8; 
+    if (!strcmp(mappingString, "KBD_RIGHT")) keyMapping[Key] = KBD_RIGHT << 8; 
     if (!strcmp(mappingString, "KBD_SHIFT")) keyMapping[Key] = KBD_SHIFT << 8; 
     if (!strcmp(mappingString, "KBD_CONTROL")) keyMapping[Key] = KBD_CONTROL << 8; 
     if (!strcmp(mappingString, "KBD_GRAPH")) keyMapping[Key] = KBD_GRAPH << 8; 
@@ -190,6 +192,10 @@ int InitMachine(void){
     setDefaultKeymapping();
     LoadKeyMapping("/sd/odroid/data/msx/config.ini");
     
+    if(fileExist("/sd/odroid/data/msx/dac.dat")) {
+        // we have a saved state, should load this when the emulator is up
+       
+    }
     InitVideo();
     odroidFmsxGUI_initMenu();
    
@@ -269,8 +275,7 @@ void keybmoveCursor(odroid_gamepad_state out_state) {
 }
 unsigned int Joystick(void) {
     unsigned int returnState = 0;
-    
-    
+  
     
     odroid_gamepad_state out_state;
     odroid_input_gamepad_read(&out_state);

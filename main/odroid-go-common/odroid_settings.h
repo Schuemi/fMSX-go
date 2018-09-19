@@ -22,6 +22,7 @@ typedef enum
 
 typedef enum
 {
+    ODROID_AUDIO_SINK_NONE = 99,
     ODROID_AUDIO_SINK_SPEAKER = 0,
     ODROID_AUDIO_SINK_DAC
 } ODROID_AUDIO_SINK;
