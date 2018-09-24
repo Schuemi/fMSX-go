@@ -22,9 +22,7 @@
  * THE SOFTWARE.
  */
 
-/*
- The SDK does not know anything about relative paths. To get the original fMSX sources to compile without modifying them, I had to overload some file operations. 
- */
+
 #include "LibOdroidGo.h"
 #include <stdlib.h>
 #include <string.h>
@@ -32,6 +30,8 @@
 #include <dirent.h>
 #include <sys/stat.h>
 
+#include "odroid_display.h"
+#include <stdarg.h>
 
 char* buffer;
 char* fullCurrentDir;
@@ -150,21 +150,50 @@ char* getFullPath(char* buffer, const char* fileName, int bufferLength){
 
 DIR* _opendir(const char* name)
 {
+    STOP_DISPLAY_FUNCTION();
     DIR* d;
     if (!strcmp(name, ".")) {
         d = opendir(getcwd(buffer, 1024));
     } else d = opendir(name);
     
-
+    RESUME_DISPLAY_FUNCTION();
     return d;
 
 }
-
-void _rewinddir(DIR* pdir) {
-    rewinddir(pdir);
+size_t _fread(_PTR __restrict p, size_t _size, size_t _n, FILE *__restrict f) {
+    STOP_DISPLAY_FUNCTION();
+    size_t s = fread(p, _size, _n, f);
+    RESUME_DISPLAY_FUNCTION();
+    return s;
 }
+size_t _fwrite(const _PTR __restrict p , size_t _size, size_t _n, FILE * f) {
+    STOP_DISPLAY_FUNCTION();
+    size_t s = fwrite(p, _size, _n, f);
+    RESUME_DISPLAY_FUNCTION();
+    return s;
+}
+
+int _closedir(FILE* f) {
+    int res;
+    STOP_DISPLAY_FUNCTION();
+    res = closedir(f);
+    RESUME_DISPLAY_FUNCTION();
+    return res;
+}
+void _rewinddir(DIR* pdir) {
+    STOP_DISPLAY_FUNCTION();
+    rewinddir(pdir);
+    RESUME_DISPLAY_FUNCTION();
+}
+void _rewind(FILE* f) {
+    STOP_DISPLAY_FUNCTION();
+    rewind(f);
+    RESUME_DISPLAY_FUNCTION();
+}
+
 struct dirent* _readdir(DIR* pdir)
 {
+    STOP_DISPLAY_FUNCTION();
     if (telldir(pdir) == 0) {
         // the first dir I should send is the ".." dir to go one dir up.
         
@@ -174,29 +203,101 @@ struct dirent* _readdir(DIR* pdir)
         
         firstDirEntry = *(readdir(pdir));
         haveFirstDirEntry = true;
+        RESUME_DISPLAY_FUNCTION();
         return &dirInfo;
         
     }
     if (haveFirstDirEntry){
         haveFirstDirEntry = false;
+        RESUME_DISPLAY_FUNCTION();
         return &firstDirEntry;
         
     }
-    return readdir(pdir);
+    struct dirent* r = readdir(pdir);
+    RESUME_DISPLAY_FUNCTION();
+    return r;
     
 }
 int _stat( const char *__restrict __path, struct stat *__restrict __sbuf ){
 
+    STOP_DISPLAY_FUNCTION();
     if (!strcmp(__path, "..")) {
+        RESUME_DISPLAY_FUNCTION();
         __sbuf->st_mode = 0x41FF;
         return 0;
     }
     getFullPath(buffer, __path, 1024);
-    return stat(buffer, __sbuf);
+    int res =  stat(buffer, __sbuf);
+    RESUME_DISPLAY_FUNCTION();
+    return res;
+}
+int _fscanf(FILE *__restrict f, const char *__restrict c, ...) {
+    STOP_DISPLAY_FUNCTION();
+    va_list args;
+    va_start(args, c);
+    int res = fscanf(f,c, args);
+    va_end(args);
+    RESUME_DISPLAY_FUNCTION();
+    return res;
+    
+}
+int _fprintf(FILE *__restrict f, const char *__restrict c, ...){
+    STOP_DISPLAY_FUNCTION();
+    va_list args;
+    va_start(args, c);
+    int res = fprintf(f,c, args);
+    va_end(args);
+    RESUME_DISPLAY_FUNCTION();
+    return res;
+}
+int _fgetc(FILE * f)
+{
+    STOP_DISPLAY_FUNCTION();
+    int res = fgetc(f);
+    RESUME_DISPLAY_FUNCTION();
+    return res;
+}
+
+int _fputc(int i, FILE * f)
+{
+    STOP_DISPLAY_FUNCTION();
+    int res = fputc(i,f);
+    RESUME_DISPLAY_FUNCTION();
+    return res;
+}
+int _fputs(const char *__restrict c, FILE *__restrict f)
+{
+    STOP_DISPLAY_FUNCTION();
+    int res = fputs(c,f);
+    RESUME_DISPLAY_FUNCTION();
+    return res;
+}
+
+char * _fgets(char *__restrict c, int i, FILE *__restrict f)
+{
+    STOP_DISPLAY_FUNCTION();
+    char * res = fgets(c, i, f);
+    RESUME_DISPLAY_FUNCTION();
+    return res;
+}
+
+
+int _fseek(FILE * f, long a, int b) {
+    STOP_DISPLAY_FUNCTION();
+    int ret = fseek(f, a, b);
+    RESUME_DISPLAY_FUNCTION();
+    return ret;
+}
+long _ftell( FILE * f) {
+    STOP_DISPLAY_FUNCTION();
+    long r = ftell(f);
+    RESUME_DISPLAY_FUNCTION();
+    return r;
 }
 
 FILE* _fopen(const char *__restrict _name, const char *__restrict _type) {
-    // is this a bios file?
+       
+     // is this a bios file?
     if (!strcmp(_name, "CMOS.ROM") || !strcmp(_name, "KANJI.ROM") || !strcmp(_name, "RS232.ROM") || !strcmp(_name, "MSXDOS2.ROM") || !strcmp(_name, "PAINTER.ROM")  || !strcmp(_name, "FMPAC.ROM") || !strcmp(_name, "MSX.ROM") || !strcmp(_name, "MSX2.ROM") || !strcmp(_name, "MSX2EXT.ROM") || !strcmp(_name, "DISK.ROM") || !strcmp(_name, "MSX2P.ROM") ||  !strcmp(_name, "MSX2PEXT.ROM")) {
         //it's a rom file, open from rom file path
         snprintf(buffer, 1024, "/sd/roms/msx/bios/%s", _name);
@@ -208,19 +309,29 @@ FILE* _fopen(const char *__restrict _name, const char *__restrict _type) {
     } else {
         strncpy(buffer, _name, 1024);
     }
-    return fopen(buffer, _type);
+    printf("fopen: %s\n", buffer);
+    STOP_DISPLAY_FUNCTION();
+    FILE* f = fopen(buffer, _type);
+    RESUME_DISPLAY_FUNCTION();
+    return f;
 }
 int _fclose(FILE* file) {
+    STOP_DISPLAY_FUNCTION();
     fflush(file);
-    return fclose(file);
+    int res =  fclose(file);
+    RESUME_DISPLAY_FUNCTION();
+    return res;
 }
 long _telldir(DIR* pdir){
+    STOP_DISPLAY_FUNCTION();
     long r = telldir(pdir);
     if (r > 0) r++;
+    RESUME_DISPLAY_FUNCTION();
     return r;
 }
 void _seekdir(DIR* pdir, long loc){
+    STOP_DISPLAY_FUNCTION();
     if (loc > 0) loc--;
      seekdir(pdir, loc);
-    
+    RESUME_DISPLAY_FUNCTION();
 }

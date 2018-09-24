@@ -60,6 +60,16 @@ void odroidFmsxGUI_msgBox(const char* title, const char* msg, char waitKey);
 #define SND_BITS        8
 #define SND_BUFSIZE     (1<<SND_BITS)
 
+#ifndef STOP_DISPLAY_FUNCTION
+    #define STOP_DISPLAY_FUNCTION odroid_display_stop_msx_display
+#endif
+
+#ifndef RESUME_DISPLAY_FUNCTION
+    #define RESUME_DISPLAY_FUNCTION odroid_display_resume_msx_display
+#endif
+
+
+
 unsigned int InitAudio(unsigned int Rate,unsigned int Latency);
 void audio_volume_set_change(void);
 void pause_audio(void);

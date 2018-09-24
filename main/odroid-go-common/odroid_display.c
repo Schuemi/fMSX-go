@@ -44,6 +44,7 @@ QueueHandle_t line_buffer_queue;
 SemaphoreHandle_t line_semaphore;
 SemaphoreHandle_t spi_empty;
 SemaphoreHandle_t spi_count_semaphore;
+char stopDisplay = 0;
 
 
 bool isBackLightIntialized = false;
@@ -1239,6 +1240,7 @@ void ili9341_write_frame_nes(uint8_t* buffer, uint16_t* myPalette, uint8_t scale
 
 void ili9341_write_frame_msx(short left, short top, short width, short height, uint16_t* buffer, uint16_t bgColor)
 {
+    if (stopDisplay) return;
     odroid_display_lock_msx_display();
     
     // todo: center, draw border, maybe even faster?...
@@ -1515,7 +1517,17 @@ void odroid_display_unlock_msx_display()
 
     xSemaphoreGive(msx_mutex);
 }
-
+void odroid_display_stop_msx_display()
+{
+    odroid_display_lock_msx_display();
+    stopDisplay = 1;
+    odroid_display_unlock_msx_display();
+    
+}
+void odroid_display_resume_msx_display()
+{
+    stopDisplay = 0;
+}
 
 
 SemaphoreHandle_t nes_mutex = NULL;

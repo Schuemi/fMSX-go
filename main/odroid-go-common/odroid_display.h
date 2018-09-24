@@ -7,6 +7,15 @@ enum ODROID_SD_ERR {
     ODROID_SD_ERR_NOCARD = 0x02
 };
 
+#ifndef STOP_DISPLAY_FUNCTION
+    #define STOP_DISPLAY_FUNCTION odroid_display_stop_msx_display
+#endif
+
+#ifndef RESUME_DISPLAY_FUNCTION
+    #define RESUME_DISPLAY_FUNCTION odroid_display_resume_msx_display
+#endif
+
+
 void ili9341_write_frame_gb(uint16_t* buffer, int scale);
 void ili9341_init();
 void ili9341_poweroff();
@@ -40,3 +49,5 @@ void odroid_display_lock_sms_display();
 void odroid_display_unlock_sms_display();
 void odroid_display_lock_msx_display();
 void odroid_display_unlock_msx_display();
+void odroid_display_stop_msx_display();
+void odroid_display_resume_msx_display();
