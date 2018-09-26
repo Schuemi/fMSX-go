@@ -42,6 +42,9 @@
 #include <sys/stat.h>
 
 #include <stdbool.h>
+//////////////// Multiplayer ///////////////
+
+void server_init();
 
 ////////////// Menu //////////////////
 typedef enum  {

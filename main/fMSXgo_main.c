@@ -47,6 +47,9 @@
 #include "nvs_flash.h"
 
 #include "LibOdroidGo.h"
+#include "esp_event.h"
+
+#include "esp_event_loop.h"
 
 #ifndef PIXEL
     #define PIXEL(R,G,B)    (pixel)(((31*(R)/255)<<11)|((63*(G)/255)<<5)|(31*(B)/255))
@@ -55,10 +58,29 @@ const char* SD_BASE_PATH = "/sd";
 
 
 //mkfw.exe "fMSX" tile.raw 0 16 2097152 fMSX goMSX.bin
+
+
 void app_main(void) {
-           
-  nvs_flash_init();
- 
+     
+    size_t free = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+    printf("free starting MALLOC_CAP_8BIT: %d\n", free);
+    
+    free = heap_caps_get_free_size(MALLOC_CAP_DMA);
+    printf("free starting MALLOC_CAP_DMA: %d\n", free);
+    
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+      ESP_ERROR_CHECK(nvs_flash_erase());
+      ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
+    //  server_init(); 
+   free = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+   printf("free after server init MALLOC_CAP_8BIT: %d\n", free);
+   
+   free = heap_caps_get_free_size(MALLOC_CAP_DMA);
+   printf("free after server init MALLOC_CAP_DMA: %d\n", free);
+   
    uint8_t initOkay;
    uint8_t failure = 0;
    
@@ -88,6 +110,8 @@ void app_main(void) {
    initOkay = InitMachine();
    
    
+   
+  
    if (initOkay) {
         Mode=(Mode&~MSX_VIDEO)|MSX_PAL;
         Mode=(Mode&~MSX_MODEL)|MSX_MSX2;

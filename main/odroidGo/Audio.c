@@ -41,7 +41,7 @@
 #define AUDIO_BUFFER_SAMPLES 128
 
 
-//#define NO_SOUND
+#define NO_SOUND
 
 
 static sample *streamAudioBuffer1;

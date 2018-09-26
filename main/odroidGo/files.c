@@ -235,7 +235,7 @@ int _fscanf(FILE *__restrict f, const char *__restrict c, ...) {
     STOP_DISPLAY_FUNCTION();
     va_list args;
     va_start(args, c);
-    int res = fscanf(f,c, args);
+    int res = vfscanf(f,c, args);
     va_end(args);
     RESUME_DISPLAY_FUNCTION();
     return res;
@@ -245,7 +245,7 @@ int _fprintf(FILE *__restrict f, const char *__restrict c, ...){
     STOP_DISPLAY_FUNCTION();
     va_list args;
     va_start(args, c);
-    int res = fprintf(f,c, args);
+    int res = vfprintf(f,c, args);
     va_end(args);
     RESUME_DISPLAY_FUNCTION();
     return res;
@@ -309,7 +309,7 @@ FILE* _fopen(const char *__restrict _name, const char *__restrict _type) {
     } else {
         strncpy(buffer, _name, 1024);
     }
-    printf("fopen: %s\n", buffer);
+    //printf("fopen: %s\n", buffer);
     STOP_DISPLAY_FUNCTION();
     FILE* f = fopen(buffer, _type);
     RESUME_DISPLAY_FUNCTION();

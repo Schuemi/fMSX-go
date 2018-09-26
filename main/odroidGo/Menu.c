@@ -69,7 +69,7 @@ char* lastOpenedFileFullPath;
 int position = 0;
 int selPosition = 0;
    
-#define MENU_ITEMS 12
+#define MENU_ITEMS 15
 static const struct {
     const char* menuItem[MENU_ITEMS];
     
@@ -84,6 +84,9 @@ static const struct {
    "Reset\n",
    "\n",
    "Audio output\n",
+   "\n",
+   "Start multiplayer server\n",
+   "Start multiplayer client\n",
    "\n",
    "About\n",
    
@@ -543,6 +546,13 @@ MENU_ACTION odroidFmsxGUI_showMenu() {
                    ret = MENU_ACTION_CHANGED_AUDIO_TYPE;
                    break;
                case 11:
+                   odroidFmsxGUI_msgBox("Multiplayer", " Server is starting... ", 0);
+                   server_init();
+                   odroidFmsxGUI_msgBox("Multiplayer", " Server Started, waiting for connection ", 1);
+                   stopMenu = true;
+                   break;
+               
+               case 14:
                    odroidFmsxGUI_msgBox("About", " \nfMSX\n\n by Marat Fayzullin\n\n ported by Jan P. Schuemann\n\nThanks to the ODROID-GO community\n\nHave fun!\n ", 1);
                break;
            };
