@@ -172,7 +172,7 @@ static const struct {
 	       ((((uint16_t)r) << 8) & 0xf800)
 
 
-pixel* framebuffer[2];
+uint8_t* msxFramebuffer;
 pixel* cursor;
 
 pixel* cursorBackGround;
@@ -209,27 +209,30 @@ void videoTask(void* arg)
   while(1)
   {
     xQueuePeek(videoQueue, &param, portMAX_DELAY);
-     if (VideoTaskCommand == 1 || lastBGColor != XPal[BGColor]) {// clear screen first
+    uint16_t* palette = XPal;
+    
+    if (ScrMode == 10 || ScrMode == 12 || ScrMode == 8) palette = BPal;
+    
+    if (VideoTaskCommand == 1 || lastBGColor != XPal[BGColor]) {// clear screen first
        if (! showKeyboard) 
-         ili9341_write_frame_msx(0,0,WIDTH_OVERLAY,HEIGHT_OVERLAY, NULL, XPal[BGColor]);
+         ili9341_write_frame_msx(0,0,WIDTH_OVERLAY,HEIGHT_OVERLAY, NULL, XPal[BGColor], palette);
        else
-         ili9341_write_frame_msx(0,0,WIDTH_OVERLAY,HEIGHT_OVERLAY/2, NULL, XPal[BGColor]);
+         ili9341_write_frame_msx(0,0,WIDTH_OVERLAY,HEIGHT_OVERLAY/2, NULL, XPal[BGColor], palette);
        
        lastBGColor = XPal[BGColor];
      }
      VideoTaskCommand = 0;
    
-     if (! flipScreen)
-        ili9341_write_frame_msx(MSX_DISPLAY_X, MSX_DISPLAY_Y  ,WIDTH,HEIGHT/2, framebuffer[0], XPal[BGColor]);
-     else
-        ili9341_write_frame_msx(MSX_DISPLAY_X, MSX_DISPLAY_Y  ,WIDTH,HEIGHT/2, framebuffer[1], XPal[BGColor]);
+     if (! showKeyboard) {
+          ili9341_write_frame_msx(MSX_DISPLAY_X, MSX_DISPLAY_Y  ,WIDTH,HEIGHT, msxFramebuffer, XPal[BGColor], palette);
+     } else {
+         if (! flipScreen)
+           ili9341_write_frame_msx(MSX_DISPLAY_X, MSX_DISPLAY_Y  ,WIDTH,HEIGHT/2, msxFramebuffer, XPal[BGColor], palette);
+        else
+           ili9341_write_frame_msx(MSX_DISPLAY_X, MSX_DISPLAY_Y  ,WIDTH,HEIGHT/2, msxFramebuffer + WIDTH*(HEIGHT/2), XPal[BGColor], palette);
+     }
      
-    
-    if (! showKeyboard) 
-        ili9341_write_frame_msx(MSX_DISPLAY_X, MSX_DISPLAY_Y + (HEIGHT/2)  ,WIDTH,HEIGHT/2, framebuffer[1], XPal[BGColor]);
-    
-    
-    else if (reDrawKeyboard || reDrawCursor) {
+    if (showKeyboard && (reDrawKeyboard || reDrawCursor)) {
         pixel* cp;
         pixel* bg;    
         
@@ -310,11 +313,11 @@ int InitVideo(void) {
     XPal = heap_caps_malloc(80*sizeof(uint16_t), MALLOC_CAP_DMA | MALLOC_CAP_8BIT);
     ZBuf = heap_caps_malloc(320, MALLOC_CAP_DMA | MALLOC_CAP_8BIT);
     
-    for (int i = 0; i < 2; i++) {
-         framebuffer[i] = (pixel*)heap_caps_malloc(WIDTH*(HEIGHT/2)*sizeof(pixel), MALLOC_CAP_DMA | MALLOC_CAP_8BIT);
-         memset(framebuffer[i], 0, WIDTH*(HEIGHT/2)*sizeof(pixel));
-        if (!framebuffer[i]){ printf("malloc framebuffer%d failed!\n", i); return 0; }
-    }
+
+    msxFramebuffer = (uint8_t*)heap_caps_malloc(WIDTH*HEIGHT*sizeof(uint8_t), MALLOC_CAP_DMA | MALLOC_CAP_8BIT);
+    memset(msxFramebuffer, 0, WIDTH*HEIGHT);
+    if (!msxFramebuffer){ printf("malloc msxFramebuffer failed!\n"); return 0; }
+    
     cursor = (pixel*)heap_caps_malloc(CURSOR_MAX_WIDTH*CURSOR_MAX_HEIGHT*sizeof(pixel), MALLOC_CAP_DMA | MALLOC_CAP_8BIT);
     if (!cursor){ printf("malloc cursor failed!\n"); return 0; }
     
@@ -356,7 +359,7 @@ int InitVideo(void) {
       XPal[15] = Black;
     
      // clear screen
-    ili9341_write_frame_msx(0,0,WIDTH_OVERLAY,HEIGHT_OVERLAY, NULL, XPal[BGColor]);
+    ili9341_write_frame_msx(0,0,WIDTH_OVERLAY,HEIGHT_OVERLAY, NULL, XPal[BGColor], XPal);
     
     
     xTaskCreatePinnedToCore(&videoTask, "videoTask", 2048, NULL, 5, NULL, 1);
@@ -366,9 +369,8 @@ int InitVideo(void) {
     
 }
 void TrashVideo(void){
-    for (int i = 0; i < 2; i++) {
-        free(framebuffer[i]);
-    }
+    
+    free(msxFramebuffer);
     free(overlay.Data);
 }
  
@@ -394,7 +396,7 @@ void SetColor(byte N,byte R,byte G,byte B) {
 /** Given a color in YJK format, return the corresponding   **/
 /** palette entry.                                          **/
 /*************************************************************/
-pixel YJKColor(register int Y,register int J,register int K)
+uint8_t YJKColor(register int Y,register int J,register int K)
 {
   register int R,G,B;
 		
@@ -406,7 +408,7 @@ pixel YJKColor(register int Y,register int J,register int K)
   G=G<0? 0:G>31? 31:G;
   B=B<0? 0:B>31? 31:B;
 
-  return(BPal[(R&0x1C)|((G&0x1C)<<3)|(B>>3)]);
+  return((R&0x1C)|((G&0x1C)<<3)|(B>>3)); // BPAL
 }
 
 
@@ -427,7 +429,7 @@ void RefreshScreen(void) {
     
     for (register int y = lastLine+1; y < HEIGHT; y++) {
         for (register int w = 0; w < WIDTH; w++) {
-            framebuffer[1][w+((y-(HEIGHT/2))*WIDTH)]= XPal[BGColor];
+            msxFramebuffer[w+(y*WIDTH)]= BGColor;
         }
     }
    xQueueSend(videoQueue, (void*)&VideoTaskCommand, portMAX_DELAY);
@@ -446,7 +448,7 @@ void RefreshScreen(void) {
 /** ClearLine() **********************************************/
 /** Clear 256 pixels from P with color C.                   **/
 /*************************************************************/
-static void ClearLine(register pixel *P,register pixel C)
+static void ClearLine(register uint8_t *P,register uint8_t C)
 {
   register int J;
 
@@ -639,10 +641,10 @@ void ColorSprites(register byte Y,byte *ZBuf)
 /** This function is called from RefreshLine#() to refresh  **/
 /** sprites in SCREENs 1-3.                                 **/
 /*************************************************************/
-void Sprites(register byte Y,register pixel *Line)
+void Sprites(register byte Y,register uint8_t *Line)
 {
   static const byte SprHeights[4] = { 8,16,16,32 };
-  register pixel *P,C;
+  register uint8_t *P,C;
   register byte OH,IH,*PT,*AT;
   register unsigned int M;
   register int L,K;
@@ -702,7 +704,7 @@ void Sprites(register byte Y,register pixel *Line)
         P  = Line+L;
         K  = Y-K-1;
         PT = SprGen+((int)(IH>8? AT[2]&0xFC:AT[2])<<3)+(OH>IH? (K>>1):K);
-        C  = XPal[C];
+       
 
         /* Mask 1: clip left sprite boundary */
         K=L>=0? 0xFFFF:(0x10000>>(OH>IH? (-L>>1):-L))-1;
@@ -783,13 +785,13 @@ void Sprites(register byte Y,register pixel *Line)
     }
 }
 
-pixel *GetBuffer(register byte Y,register pixel C, register int M)
+uint8_t *GetBuffer(register byte Y,register uint8_t C, register int M)
 {
     
     if(!Y){
         register int H; 
         FirstLine=(ScanLines212? 8:18)+VAdjust;
-        for(H=WIDTH*FirstLine-1;H>=0;H--) framebuffer[0][H]=C;
+        for(H=WIDTH*FirstLine-1;H>=0;H--) msxFramebuffer[H]=C;
     }
      
     /* Return 0 if we've run out of the screen buffer due to overscan */
@@ -798,36 +800,31 @@ pixel *GetBuffer(register byte Y,register pixel C, register int M)
       
   int16_t ln = lastLine;
   if (ln < 0) ln = 0;
-  uint8_t cf = 0;
-  if (ln >= HEIGHT/2) {
-      ln -= HEIGHT/2;
-      cf = 1;
-  }
- 
+
 
   /* Set up the transparent color */
   XPal[0]=(!BGColor||SolidColor0)? XPal0:XPal[BGColor];
-  pixel* P = &framebuffer[cf][ln * WIDTH];
+  uint8_t* P = &msxFramebuffer[ln * WIDTH];
  
   /* Paint left/right borders */
   for(register int H=(WIDTH-256)/2+HAdjust;H>0;H--) P[H-1]=C;
   for(register int H=(WIDTH-256)/2-HAdjust;H>0;H--) P[WIDTH-H]=C;
   
  
-  return((&framebuffer[cf][ln * WIDTH])+(WIDTH-256)/2+HAdjust);
+  return((&msxFramebuffer[ln * WIDTH])+(WIDTH-256)/2+HAdjust);
 }
 
 /** RefreshLineTx80() ****************************************/
 /** Refresh line Y (0..191/211) of TEXT80.                  **/
 /*************************************************************/
-void RefreshLineTx80(byte Y) 
+void RefreshLineTx80(byte Y)  // XPal
 {
    
-    register pixel *P,FC,BC;
+    register uint8_t *P,FC,BC;
   register byte X,M,*T,*C,*G;
 
-  BC=XPal[BGColor];
-  P=GetBuffer(Y,BC, 80);
+ 
+  P=GetBuffer(Y,BGColor, 80);
   if(!P) return;
 
   if(!ScreenON) ClearLine(P,BC);
@@ -842,8 +839,8 @@ void RefreshLineTx80(byte Y)
     for(X=0,M=0x00;X<80;X++,T++,P+=3)
     {
       if(!(X&0x07)) M=*C++;
-      if(M&0x80) { FC=XPal[XFGColor];BC=XPal[XBGColor]; }
-      else       { FC=XPal[FGColor];BC=XPal[BGColor]; }
+      if(M&0x80) { FC=XFGColor;BC=XBGColor; }
+      else       { FC=FGColor;BC=BGColor; }
       M<<=1;
       Y=*(G+((int)*T<<3));
       P[0]=Y&0xC0? FC:BC;
@@ -851,17 +848,17 @@ void RefreshLineTx80(byte Y)
       P[2]=Y&0x0C? FC:BC;
     }
 
-    P[0]=P[1]=P[2]=P[3]=P[4]=P[5]=P[6]=XPal[BGColor];
+    P[0]=P[1]=P[2]=P[3]=P[4]=P[5]=P[6]=BGColor;
   }
 
 }
 
-void RefreshLine0(byte Y) { 
+void RefreshLine0(byte Y) { // XPal
      
-  register pixel *P,FC,BC;
+  register uint8_t *P,FC,BC;
   register byte X,*T,*G;
   byte line = Y;
-  BC=XPal[BGColor];
+  BC=BGColor;
   P=GetBuffer(Y,BC, 0);
   if(!P) return;
 
@@ -872,7 +869,7 @@ void RefreshLine0(byte Y) {
 
     G=(FontBuf&&(Mode&MSX_FIXEDFONT)? FontBuf:ChrGen)+((Y+VScroll)&0x07);
     T=ChrTab+40*(Y>>3);
-    FC=XPal[FGColor];
+    FC=FGColor;
     P+=9;
 
     for(X=0;X<40;X++,T++,P+=6)
@@ -887,15 +884,15 @@ void RefreshLine0(byte Y) {
   }
 
 }
-void RefreshLine1(register byte Y) // start screen MSX1. this mode works
+void RefreshLine1(register byte Y) // XPal
 {
-  register pixel *P,FC,BC;
+  register uint8_t *P,FC,BC;
   register byte K,X,*T,*G;
   byte line = Y;
-  P=GetBuffer(Y,XPal[BGColor], 1);
+  P=GetBuffer(Y,BGColor, 1);
   if(!P) return;
 
-  if(!ScreenON) ClearLine(P,XPal[BGColor]);
+  if(!ScreenON) ClearLine(P,BGColor);
   else
   {
     Y+=VScroll;
@@ -905,8 +902,8 @@ void RefreshLine1(register byte Y) // start screen MSX1. this mode works
     for(X=0;X<32;X++,T++,P+=8)
     {
       K=ColTab[*T>>3];
-      FC=XPal[K>>4];
-      BC=XPal[K&0x0F];
+      FC=K>>4;
+      BC=K&0x0F;
       K=G[(int)*T<<3];
       P[0]=K&0x80? FC:BC;P[1]=K&0x40? FC:BC;
       P[2]=K&0x20? FC:BC;P[3]=K&0x10? FC:BC;
@@ -923,16 +920,16 @@ void RefreshLine1(register byte Y) // start screen MSX1. this mode works
 /** Refresh line Y (0..191/211) of SCREEN2, including       **/
 /** sprites in this line.                                   **/
 /*************************************************************/
-void RefreshLine2(register byte Y)
+void RefreshLine2(register byte Y) // XPal
 {
-  register pixel *P,FC,BC;
+  register uint8_t *P,FC,BC;
   register byte K,X,*T;
   register int I,J;
-  byte line = Y;
-  P=GetBuffer(Y,XPal[BGColor], 2);
+ 
+  P=GetBuffer(Y,BGColor, 2);
   if(!P) return;
 
-  if(!ScreenON) ClearLine(P,XPal[BGColor]);
+  if(!ScreenON) ClearLine(P,BGColor);
   else
   {
     Y+=VScroll;
@@ -943,8 +940,8 @@ void RefreshLine2(register byte Y)
     {
       J=(int)*T<<3;
       K=ColTab[(I+J)&ColTabM];
-      FC=XPal[K>>4];
-      BC=XPal[K&0x0F];
+      FC=K>>4;
+      BC=K&0x0F;
       K=ChrGen[(I+J)&ChrGenM];
       P[0]=K&0x80? FC:BC;P[1]=K&0x40? FC:BC;
       P[2]=K&0x20? FC:BC;P[3]=K&0x10? FC:BC;
@@ -961,15 +958,15 @@ void RefreshLine2(register byte Y)
 /** Refresh line Y (0..191/211) of SCREEN3, including       **/
 /** sprites in this line.                                   **/
 /*************************************************************/
-void RefreshLine3(register byte Y)
+void RefreshLine3(register byte Y)// XPal
 {
-  register pixel *P;
+  register uint8_t *P;
   register byte X,K,*T,*G;
   byte line = Y;
-  P=GetBuffer(Y,XPal[BGColor], 3);
+  P=GetBuffer(Y,BGColor, 3);
   if(!P) return;
 
-  if(!ScreenON) ClearLine(P,XPal[BGColor]);
+  if(!ScreenON) ClearLine(P,BGColor);
   else
   {
     Y+=VScroll;
@@ -979,8 +976,8 @@ void RefreshLine3(register byte Y)
     for(X=0;X<32;X++,T++,P+=8)
     {
       K=G[(int)*T<<3];
-      P[0]=P[1]=P[2]=P[3]=XPal[K>>4];
-      P[4]=P[5]=P[6]=P[7]=XPal[K&0x0F];
+      P[0]=P[1]=P[2]=P[3]=K>>4;
+      P[4]=P[5]=P[6]=P[7]=K&0x0F;
     }
 
     if(!SpritesOFF) Sprites(Y,P-256);
@@ -992,18 +989,18 @@ void RefreshLine3(register byte Y)
 /** Refresh line Y (0..191/211) of SCREEN4, including       **/
 /** sprites in this line.                                   **/
 /*************************************************************/
-void RefreshLine4(register byte Y)
+void RefreshLine4(register byte Y) // XPal
 {
-  register pixel *P,FC,BC;
+  register uint8_t *P,FC,BC;
   register byte K,X,C,*T,*R;
   register int I,J;
-  byte line = Y;
+  
 
 
-  P=GetBuffer(Y,XPal[BGColor], 4);
+  P=GetBuffer(Y,BGColor, 4);
   if(!P) return;
 
-  if(!ScreenON) ClearLine(P,XPal[BGColor]);
+  if(!ScreenON) ClearLine(P,BGColor);
   else
   {
     ColorSprites(Y,ZBuf);
@@ -1016,18 +1013,18 @@ void RefreshLine4(register byte Y)
     {
       J=(int)*T<<3;
       K=ColTab[(I+J)&ColTabM];
-      FC=XPal[K>>4];
-      BC=XPal[K&0x0F];
+      FC=K>>4;
+      BC=K&0x0F;
       K=ChrGen[(I+J)&ChrGenM];
 
-      C=R[0];P[0]=C? XPal[C]:(K&0x80)? FC:BC;
-      C=R[1];P[1]=C? XPal[C]:(K&0x40)? FC:BC;
-      C=R[2];P[2]=C? XPal[C]:(K&0x20)? FC:BC;
-      C=R[3];P[3]=C? XPal[C]:(K&0x10)? FC:BC;
-      C=R[4];P[4]=C? XPal[C]:(K&0x08)? FC:BC;
-      C=R[5];P[5]=C? XPal[C]:(K&0x04)? FC:BC;
-      C=R[6];P[6]=C? XPal[C]:(K&0x02)? FC:BC;
-      C=R[7];P[7]=C? XPal[C]:(K&0x01)? FC:BC;
+      C=R[0];P[0]=C? C:(K&0x80)? FC:BC;
+      C=R[1];P[1]=C? C:(K&0x40)? FC:BC;
+      C=R[2];P[2]=C? C:(K&0x20)? FC:BC;
+      C=R[3];P[3]=C? C:(K&0x10)? FC:BC;
+      C=R[4];P[4]=C? C:(K&0x08)? FC:BC;
+      C=R[5];P[5]=C? C:(K&0x04)? FC:BC;
+      C=R[6];P[6]=C? C:(K&0x02)? FC:BC;
+      C=R[7];P[7]=C? C:(K&0x01)? FC:BC;
     }
   }
 
@@ -1038,17 +1035,17 @@ void RefreshLine4(register byte Y)
 /** sprites in this line.                                   **/
 /*************************************************************/
 
-void RefreshLine5(register byte Y) 
+void RefreshLine5(register byte Y)  //XPal
 {
-  register pixel *P;
+  register uint8_t *P;
   register byte I,X,*T,*R;
   
 
-  P=GetBuffer(Y,XPal[BGColor], 5);
+  P=GetBuffer(Y,BGColor, 5);
   if(!P) return;
    
   if(!ScreenON)
-      ClearLine(P,XPal[BGColor]);
+      ClearLine(P,BGColor);
   else
   {
     ColorSprites(Y,ZBuf);
@@ -1057,22 +1054,22 @@ void RefreshLine5(register byte Y)
 
     for(X=0;X<16;X++,R+=16,P+=16,T+=8)
     {
-      I=R[0];P[0]=XPal[I? I:T[0]>>4];
-      I=R[1];P[1]=XPal[I? I:T[0]&0x0F];
-      I=R[2];P[2]=XPal[I? I:T[1]>>4];
-      I=R[3];P[3]=XPal[I? I:T[1]&0x0F];
-      I=R[4];P[4]=XPal[I? I:T[2]>>4];
-      I=R[5];P[5]=XPal[I? I:T[2]&0x0F];
-      I=R[6];P[6]=XPal[I? I:T[3]>>4];
-      I=R[7];P[7]=XPal[I? I:T[3]&0x0F];
-      I=R[8];P[8]=XPal[I? I:T[4]>>4];
-      I=R[9];P[9]=XPal[I? I:T[4]&0x0F];
-      I=R[10];P[10]=XPal[I? I:T[5]>>4];
-      I=R[11];P[11]=XPal[I? I:T[5]&0x0F];
-      I=R[12];P[12]=XPal[I? I:T[6]>>4];
-      I=R[13];P[13]=XPal[I? I:T[6]&0x0F];
-      I=R[14];P[14]=XPal[I? I:T[7]>>4];
-      I=R[15];P[15]=XPal[I? I:T[7]&0x0F];
+      I=R[0];P[0]=I? I:T[0]>>4;
+      I=R[1];P[1]=I? I:T[0]&0x0F;
+      I=R[2];P[2]=I? I:T[1]>>4;
+      I=R[3];P[3]=I? I:T[1]&0x0F;
+      I=R[4];P[4]=I? I:T[2]>>4;
+      I=R[5];P[5]=I? I:T[2]&0x0F;
+      I=R[6];P[6]=I? I:T[3]>>4;
+      I=R[7];P[7]=I? I:T[3]&0x0F;
+      I=R[8];P[8]=I? I:T[4]>>4;
+      I=R[9];P[9]=I? I:T[4]&0x0F;
+      I=R[10];P[10]=I? I:T[5]>>4;
+      I=R[11];P[11]=I? I:T[5]&0x0F;
+      I=R[12];P[12]=I? I:T[6]>>4;
+      I=R[13];P[13]=I? I:T[6]&0x0F;
+      I=R[14];P[14]=I? I:T[7]>>4;
+      I=R[15];P[15]=I? I:T[7]&0x0F;
     }
   }
 
@@ -1082,7 +1079,7 @@ void RefreshLine5(register byte Y)
 /** Refresh line Y (0..191/211) of SCREEN8, including       **/
 /** sprites in this line.                                   **/
 /*************************************************************/
-void RefreshLine8(register byte Y)
+void RefreshLine8(register byte Y) //BPal
 {
     
     static byte SprToScr[16] =
@@ -1090,14 +1087,14 @@ void RefreshLine8(register byte Y)
     0x00,0x02,0x10,0x12,0x80,0x82,0x90,0x92,
     0x49,0x4B,0x59,0x5B,0xC9,0xCB,0xD9,0xDB
   };
-  register pixel *P;
+  register uint8_t *P;
   register byte C,X,*T,*R;
 
 
-  P=GetBuffer(Y,BPal[VDP[7]], 8);
+  P=GetBuffer(Y,VDP[7], 8);
   if(!P) return;
 
-  if(!ScreenON) ClearLine(P,BPal[VDP[7]]);
+  if(!ScreenON) ClearLine(P,VDP[7]);
   else
   {
     ColorSprites(Y,ZBuf);
@@ -1106,14 +1103,14 @@ void RefreshLine8(register byte Y)
 
     for(X=0;X<32;X++,T+=8,R+=8,P+=8)
     {
-      C=R[0];P[0]=BPal[C? SprToScr[C]:T[0]];
-      C=R[1];P[1]=BPal[C? SprToScr[C]:T[1]];
-      C=R[2];P[2]=BPal[C? SprToScr[C]:T[2]];
-      C=R[3];P[3]=BPal[C? SprToScr[C]:T[3]];
-      C=R[4];P[4]=BPal[C? SprToScr[C]:T[4]];
-      C=R[5];P[5]=BPal[C? SprToScr[C]:T[5]];
-      C=R[6];P[6]=BPal[C? SprToScr[C]:T[6]];
-      C=R[7];P[7]=BPal[C? SprToScr[C]:T[7]];
+      C=R[0];P[0]=C? SprToScr[C]:T[0];
+      C=R[1];P[1]=C? SprToScr[C]:T[1];
+      C=R[2];P[2]=C? SprToScr[C]:T[2];
+      C=R[3];P[3]=C? SprToScr[C]:T[3];
+      C=R[4];P[4]=C? SprToScr[C]:T[4];
+      C=R[5];P[5]=C? SprToScr[C]:T[5];
+      C=R[6];P[6]=C? SprToScr[C]:T[6];
+      C=R[7];P[7]=C? SprToScr[C]:T[7];
     }
   }
 
@@ -1123,18 +1120,18 @@ void RefreshLine8(register byte Y)
 /** Refresh line Y (0..191/211) of SCREEN10/11, including   **/
 /** sprites in this line.                                   **/
 /*************************************************************/
-void RefreshLine10(register byte Y)
+void RefreshLine10(register byte Y) // BPal
 {
   
-    register pixel *P;
+    register uint8_t *P;
   register byte C,X,*T,*R;
   register int J,K;
 
  
-  P=GetBuffer(Y,BPal[VDP[7]], 10);
+  P=GetBuffer(Y,VDP[7], 10);
   if(!P) return;
 
-  if(!ScreenON) ClearLine(P,BPal[VDP[7]]);
+  if(!ScreenON) ClearLine(P,VDP[7]);
   else
   {
     ColorSprites(Y,ZBuf);
@@ -1142,10 +1139,10 @@ void RefreshLine10(register byte Y)
     T=ChrTab+(((int)(Y+VScroll)<<8)&ChrTabM&0xFFFF);
 
     /* Draw first 4 pixels */
-    C=R[0];P[0]=C? XPal[C]:BPal[VDP[7]];
-    C=R[1];P[1]=C? XPal[C]:BPal[VDP[7]];
-    C=R[2];P[2]=C? XPal[C]:BPal[VDP[7]];
-    C=R[3];P[3]=C? XPal[C]:BPal[VDP[7]];
+    C=R[0];P[0]=C? C:VDP[7];
+    C=R[1];P[1]=C? C:VDP[7];
+    C=R[2];P[2]=C? C:VDP[7];
+    C=R[3];P[3]=C? C:VDP[7];
     R+=4;P+=4;
 
     for(X=0;X<63;X++,T+=4,R+=4,P+=4)
@@ -1155,10 +1152,10 @@ void RefreshLine10(register byte Y)
       J=(T[2]&0x07)|((T[3]&0x07)<<3);
       if(J&0x20) J-=64;
 
-      C=R[0];Y=T[0]>>3;P[0]=C? XPal[C]:Y&1? XPal[Y>>1]:YJKColor(Y,J,K);
-      C=R[1];Y=T[1]>>3;P[1]=C? XPal[C]:Y&1? XPal[Y>>1]:YJKColor(Y,J,K);
-      C=R[2];Y=T[2]>>3;P[2]=C? XPal[C]:Y&1? XPal[Y>>1]:YJKColor(Y,J,K);
-      C=R[3];Y=T[3]>>3;P[3]=C? XPal[C]:Y&1? XPal[Y>>1]:YJKColor(Y,J,K);
+      C=R[0];Y=T[0]>>3;P[0]=C? C:Y&1? Y>>1:YJKColor(Y,J,K);
+      C=R[1];Y=T[1]>>3;P[1]=C? C:Y&1? Y>>1:YJKColor(Y,J,K);
+      C=R[2];Y=T[2]>>3;P[2]=C? C:Y&1? Y>>1:YJKColor(Y,J,K);
+      C=R[3];Y=T[3]>>3;P[3]=C? C:Y&1? Y>>1:YJKColor(Y,J,K);
     }
   }
 
@@ -1169,15 +1166,15 @@ void RefreshLine10(register byte Y)
 /** Refresh line Y (0..191/211) of SCREEN12, including      **/
 /** sprites in this line.                                   **/
 /*************************************************************/
-void RefreshLine12(register byte Y)
+void RefreshLine12(register byte Y) // BPal
 {
   
-    register pixel *P;
+    register uint8_t *P;
   register byte C,X,*T,*R;
   register int J,K;
 
 
-  P=GetBuffer(Y,BPal[VDP[7]], 12);
+  P=GetBuffer(Y,VDP[7], 12);
   if(!P) return;
 
   if(!ScreenON) ClearLine(P,BPal[VDP[7]]);
@@ -1191,10 +1188,10 @@ void RefreshLine12(register byte Y)
       + (HScroll&0xFC);
 
     /* Draw first 4 pixels */
-    C=R[0];P[0]=C? XPal[C]:BPal[VDP[7]];
-    C=R[1];P[1]=C? XPal[C]:BPal[VDP[7]];
-    C=R[2];P[2]=C? XPal[C]:BPal[VDP[7]];
-    C=R[3];P[3]=C? XPal[C]:BPal[VDP[7]];
+    C=R[0];P[0]=C? C:VDP[7];
+    C=R[1];P[1]=C? C:VDP[7];
+    C=R[2];P[2]=C? C:VDP[7];
+    C=R[3];P[3]=C? C:VDP[7];
     R+=4;P+=4;
 
     for(X=1;X<64;X++,T+=4,R+=4,P+=4)
@@ -1204,25 +1201,25 @@ void RefreshLine12(register byte Y)
       J=(T[2]&0x07)|((T[3]&0x07)<<3);
       if(J&0x20) J-=64;
 
-      C=R[0];P[0]=C? XPal[C]:YJKColor(T[0]>>3,J,K);
-      C=R[1];P[1]=C? XPal[C]:YJKColor(T[1]>>3,J,K);
-      C=R[2];P[2]=C? XPal[C]:YJKColor(T[2]>>3,J,K);
-      C=R[3];P[3]=C? XPal[C]:YJKColor(T[3]>>3,J,K);
+      C=R[0];P[0]=C? C:YJKColor(T[0]>>3,J,K);
+      C=R[1];P[1]=C? C:YJKColor(T[1]>>3,J,K);
+      C=R[2];P[2]=C? C:YJKColor(T[2]>>3,J,K);
+      C=R[3];P[3]=C? C:YJKColor(T[3]>>3,J,K);
     }
   }
 
 }
 
 
-void RefreshLine6(byte Y) {
-register pixel *P;
+void RefreshLine6(byte Y) { // XPAL
+register uint8_t *P;
   register byte X,*T,*R,C;
 
 
-  P=GetBuffer(Y,XPal[BGColor&0x03], 6);
+  P=GetBuffer(Y,BGColor&0x03, 6);
   if(!P) return;
 
-  if(!ScreenON) ClearLine(P,XPal[BGColor&0x03]);
+  if(!ScreenON) ClearLine(P,BGColor&0x03);
   else
   {
     ColorSprites(Y,ZBuf);
@@ -1231,14 +1228,14 @@ register pixel *P;
 
     for(X=0;X<32;X++)
     {
-      C=R[0];P[0]=XPal[C? C:T[0]>>6];
-      C=R[1];P[1]=XPal[C? C:(T[0]>>2)&0x03];
-      C=R[2];P[2]=XPal[C? C:T[1]>>6];
-      C=R[3];P[3]=XPal[C? C:(T[1]>>2)&0x03];
-      C=R[4];P[4]=XPal[C? C:T[2]>>6];
-      C=R[5];P[5]=XPal[C? C:(T[2]>>2)&0x03];
-      C=R[6];P[6]=XPal[C? C:T[3]>>6];
-      C=R[7];P[7]=XPal[C? C:(T[3]>>2)&0x03];
+      C=R[0];P[0]=C? C:T[0]>>6;
+      C=R[1];P[1]=C? C:(T[0]>>2)&0x03;
+      C=R[2];P[2]=C? C:T[1]>>6;
+      C=R[3];P[3]=C? C:(T[1]>>2)&0x03;
+      C=R[4];P[4]=C? C:T[2]>>6;
+      C=R[5];P[5]=C? C:(T[2]>>2)&0x03;
+      C=R[6];P[6]=C? C:T[3]>>6;
+      C=R[7];P[7]=C? C:(T[3]>>2)&0x03;
       R+=8;P+=8;T+=4;
     }
   }
@@ -1250,16 +1247,16 @@ register pixel *P;
 /** Refresh line Y (0..191/211) of SCREEN7, including       **/
 /** sprites in this line.                                   **/
 /*************************************************************/
-void RefreshLine7(register byte Y)
+void RefreshLine7(register byte Y) // XPAL
 {
-  register pixel *P;
+  register uint8_t *P;
   register byte C,X,*T,*R;
 
 
-  P=GetBuffer(Y,XPal[BGColor], 7);
+  P=GetBuffer(Y,BGColor, 7);
   if(!P) return;
 
-  if(!ScreenON) ClearLine(P,XPal[BGColor]);
+  if(!ScreenON) ClearLine(P,BGColor);
   else
   {
     ColorSprites(Y,ZBuf);
@@ -1268,14 +1265,14 @@ void RefreshLine7(register byte Y)
 
     for(X=0;X<32;X++)
     {
-      C=R[0];P[0]=XPal[C? C:T[0]>>4];
-      C=R[1];P[1]=XPal[C? C:T[1]>>4];
-      C=R[2];P[2]=XPal[C? C:T[2]>>4];
-      C=R[3];P[3]=XPal[C? C:T[3]>>4];
-      C=R[4];P[4]=XPal[C? C:T[4]>>4];
-      C=R[5];P[5]=XPal[C? C:T[5]>>4];
-      C=R[6];P[6]=XPal[C? C:T[6]>>4];
-      C=R[7];P[7]=XPal[C? C:T[7]>>4];
+      C=R[0];P[0]=C? C:T[0]>>4;
+      C=R[1];P[1]=C? C:T[1]>>4;
+      C=R[2];P[2]=C? C:T[2]>>4;
+      C=R[3];P[3]=C? C:T[3]>>4;
+      C=R[4];P[4]=C? C:T[4]>>4;
+      C=R[5];P[5]=C? C:T[5]>>4;
+      C=R[6];P[6]=C? C:T[6]>>4;
+      C=R[7];P[7]=C? C:T[7]>>4;
       R+=8;P+=8;T+=8;
     }
   }
@@ -1330,7 +1327,7 @@ void hideVirtualKeyboard() {
 /*************************************************************/
 int ShowVideo(void) {
    
-    ili9341_write_frame_msx(0,0,WIDTH_OVERLAY,HEIGHT_OVERLAY, overlay.Data, XPal[BGColor]);
+    ili9341_write_frame_rectangleLE(0,0,WIDTH_OVERLAY,HEIGHT_OVERLAY, overlay.Data);
     return 0;
 }
 

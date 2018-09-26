@@ -1238,7 +1238,7 @@ void ili9341_write_frame_nes(uint8_t* buffer, uint16_t* myPalette, uint8_t scale
 //     }
 // }
 
-void ili9341_write_frame_msx(short left, short top, short width, short height, uint16_t* buffer, uint16_t bgColor)
+void ili9341_write_frame_msx(short left, short top, short width, short height, uint8_t* buffer, uint16_t bgColor, uint16_t* palette)
 {
     if (stopDisplay) return;
     odroid_display_lock_msx_display();
@@ -1279,7 +1279,10 @@ void ili9341_write_frame_msx(short left, short top, short width, short height, u
         for (y = 0; y < height; y+=LINES_AT_ONCE) // let's send x lines with one msg
         {
             uint16_t* line_buffer = line_buffer_get();
-            memcpy(line_buffer, (buffer + y * width), width*sizeof(uint16_t)*LINES_AT_ONCE);
+            for (int x = 0; x < width*LINES_AT_ONCE; x++) {
+                line_buffer[x] = palette[buffer[x+(y*width)]];
+            }
+            //memcpy(line_buffer, (buffer + y * width), width*sizeof(uint16_t)*LINES_AT_ONCE);
             send_continue_line(line_buffer, width, LINES_AT_ONCE);
             
         }
