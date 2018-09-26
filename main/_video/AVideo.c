@@ -27,7 +27,11 @@
  *
  * Created on 16. August 2018, 14:11
  */
-
+/*
+ Why is this file in a seperated folder?
+ * It's all about speed. The linker will link this to a good position for speed. He is linking the files in alphabetical order, so the folder Name "_video" to link it on the top.
+ 
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -222,7 +226,7 @@ void videoTask(void* arg)
        lastBGColor = XPal[BGColor];
      }
      VideoTaskCommand = 0;
-   
+  
      if (! showKeyboard) {
           ili9341_write_frame_msx(MSX_DISPLAY_X, MSX_DISPLAY_Y  ,WIDTH,HEIGHT, msxFramebuffer, XPal[BGColor], palette);
      } else {
@@ -231,7 +235,7 @@ void videoTask(void* arg)
         else
            ili9341_write_frame_msx(MSX_DISPLAY_X, MSX_DISPLAY_Y  ,WIDTH,HEIGHT/2, msxFramebuffer + WIDTH*(HEIGHT/2), XPal[BGColor], palette);
      }
-     
+      
     if (showKeyboard && (reDrawKeyboard || reDrawCursor)) {
         pixel* cp;
         pixel* bg;    
