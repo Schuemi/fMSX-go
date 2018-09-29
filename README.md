@@ -64,15 +64,6 @@ Many games work very well, some crack the sound, some run too slowly. The proble
 You can't have two Multiplayer games with 4 devises at the same place yet. They're gonna bother each other, because there are no "Multiplayer rooms" yet.
 
 
-# Next:
-
-The next things I'm planning are:
-
-- Bugfix, bugfix, bugfix. No new functions the nex releases.
-
-
-When it cracks in a game: just turn off the sound.
-
 How does this work?
 
 - The server starts an access point with a hidden Siid
@@ -81,3 +72,12 @@ How does this work?
 - after starting the game on both devices they send UDP packts with joysick and keyboard data to each other. Both devices have to know what the other is doing in every vblank.
 
 
+
+# Next:
+
+The next things I'm planning are:
+
+- Bugfix, bugfix, bugfix. No new functions the nex releases.
+
+
+When it cracks in a game: just turn off the sound.
