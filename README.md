@@ -43,16 +43,6 @@ Gamesaves are saved in the same directory as the game itself. It is calles [GAME
 You can open a virtual keyboard by pressing an hold the "A" button ans then the "Menu" button. On the virtual keyboard you can use the "A" or the "B" button to press a key. If you are holding a button, this button will also be holded in the emulator. So if you go to the "shift" key, press and hold "A" and then while pressing "A" go to the "1" key and press "B"  you will write a "!". Because on the real MSX if you would press shift + 1 you will also write a "!"
 
 
-# Next:
-
-The next things I'm planning are:
-
-- resolve sound issues in some games
-- resolve some speed and color issues with some games
-- complete the new menu
-- implement preview screenshots of the games
-- include WLAN
-- 2 player mode over WLAN
 
 # Multiplayer
 
@@ -72,6 +62,14 @@ Only the server has sound
 Many games work very well, some crack the sound, some run too slowly. The problem is to run both games in exactly the same state. I've tried to get the best out of the hardware, maybe I'll find ways to optimize it, but I think it's going very well already. And it's a lot of fun.
 
 You can't have two Multiplayer games with 4 devises at the same place yet. They're gonna bother each other, because there are no "Multiplayer rooms" yet.
+
+
+# Next:
+
+The next things I'm planning are:
+
+- Bugfix, bugfix, bugfix. No new functions the nex releases.
+
 
 When it cracks in a game: just turn off the sound.
 
