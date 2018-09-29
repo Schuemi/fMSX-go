@@ -211,7 +211,8 @@ void wifi_init_softap()
             .ssid_len = strlen(MP_ESP_WIFI_SSID),
             .password = MP_ESP_WIFI_PASS,
             .max_connection = MP_MAX_STA_CONN,
-            .authmode = WIFI_AUTH_WPA_WPA2_PSK
+            .authmode = WIFI_AUTH_WPA_WPA2_PSK,
+            .ssid_hidden = 1
         },
     };
     if (strlen(MP_ESP_WIFI_PASS) == 0) {
