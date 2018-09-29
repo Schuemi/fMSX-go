@@ -5668,15 +5668,15 @@ void _UG_DrawObjectFrame( UG_S16 xs, UG_S16 ys, UG_S16 xe, UG_S16 ye, UG_COLOR* 
    UG_DrawLine(xs, ye  , xe  , ye  , *p++);
    UG_DrawLine(xe, ys  , xe  , ye-1, *p++);
    // Frame 1
-   UG_DrawLine(xs+1, ys+1, xe-2, ys+1, *p++);
-   UG_DrawLine(xs+1, ys+2, xs+1, ye-2, *p++);
-   UG_DrawLine(xs+1, ye-1, xe-1, ye-1, *p++);
-   UG_DrawLine(xe-1, ys+1, xe-1, ye-2, *p++);
+  /*UG_DrawLine(xs+1, ys+1, xe-2, ys+1, 0);
+   UG_DrawLine(xs+1, ys+2, xs+1, ye-2, 0);
+   UG_DrawLine(xs+1, ye-1, xe-1, ye-1, 0);
+   UG_DrawLine(xe-1, ys+1, xe-1, ye-2, 0);
    // Frame 2
-   UG_DrawLine(xs+2, ys+2, xe-3, ys+2, *p++);
-   UG_DrawLine(xs+2, ys+3, xs+2, ye-3, *p++);
-   UG_DrawLine(xs+2, ye-2, xe-2, ye-2, *p++);
-   UG_DrawLine(xe-2, ys+2, xe-2, ye-3, *p);
+   UG_DrawLine(xs+2, ys+2, xe-3, ys+2, 0);
+   UG_DrawLine(xs+2, ys+3, xs+2, ye-3, 0);
+   UG_DrawLine(xs+2, ye-2, xe-2, ye-2, 0);
+   UG_DrawLine(xe-2, ys+2, xe-2, ye-3, 0);*/
 }
 
 #ifdef USE_PRERENDER_EVENT

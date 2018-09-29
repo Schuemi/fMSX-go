@@ -38,10 +38,10 @@
 
 #include <string.h>
 
-#define AUDIO_BUFFER_SAMPLES 128
+#define AUDIO_BUFFER_SAMPLES 1280
 
 
-#define NO_SOUND
+//#define NO_SOUND
 
 
 static sample *streamAudioBuffer1;
@@ -139,7 +139,12 @@ void restart_audio() {
 /** Render and play given number of microseconds of sound.  **/
 /************************************ TO BE WRITTEN BY USER **/
 void PlayAllSound(int uSec) {
-    
+#ifdef NO_SOUND
+    return;
+#endif
+#ifdef WITH_WLAN
+    if (getMultiplayState() == MULTIPLAYER_CONNECTED_CLIENT) return;
+#endif
     RenderAndPlayAudio(2*uSec*AUDIO_SAMPLE_RATE/1000000);
     
 }

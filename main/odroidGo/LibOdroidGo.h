@@ -35,6 +35,8 @@
 #define FMSX_CONFIG_FILE "/sd/odroid/data/msx/config.ini"
 #define FMSX_ROOT_GAMESDIR "/sd/roms/msx"
 
+#define FMSX_MP_ROM_DATA "/sd/odroid/data/msx/mprom.rom"
+
 #include <stdint.h>
 #include <stdio.h>
 
@@ -42,9 +44,32 @@
 #include <sys/stat.h>
 
 #include <stdbool.h>
+
+#define WITH_WLAN
+
+#ifdef WITH_WLAN
 //////////////// Multiplayer ///////////////
+typedef enum  {
+    MULTIPLAYER_NOT_CONNECTED,
+    MULTIPLAYER_INIT,
+    MULTIPLAYER_CONNECTED_SERVER,
+    MULTIPLAYER_CONNECTED_CLIENT
+    
+}MULTIPLAYER_STATE;
 
 void server_init();
+void client_init();
+void server_wait_for_player();
+void client_try_connect();
+MULTIPLAYER_STATE getMultiplayState();
+void exchangeJoystickState(uint16_t* state);
+const char* getMPFileName();
+
+#endif
+
+
+
+
 
 ////////////// Menu //////////////////
 typedef enum  {
@@ -56,7 +81,8 @@ void odroidFmsxGUI_initMenu();
 MENU_ACTION odroidFmsxGUI_showMenu();
 void odroidFmsxGUI_setLastLoadedFile(const char* file);
 void odroidFmsxGUI_msgBox(const char* title, const char* msg, char waitKey);
-
+int odroidFmsxGUI_getKey_block();
+int odroidFmsxGUI_getKey();
 ///////////////// AUDIO ////////////////////////
 #define AUDIO_SAMPLE_RATE 32000
 #define SND_CHANNELS    16     /* Number of sound channels   */
@@ -71,6 +97,8 @@ void odroidFmsxGUI_msgBox(const char* title, const char* msg, char waitKey);
     #define RESUME_DISPLAY_FUNCTION odroid_display_resume_msx_display
 #endif
 
+
+int InitChangeGame(const char* name);
 
 
 unsigned int InitAudio(unsigned int Rate,unsigned int Latency);
@@ -122,6 +150,20 @@ FILE* _fopen(const char *__restrict _name, const char *__restrict _type);
 void _seekdir(DIR* pdir, long loc);
 long _telldir(DIR* pdir);
 int _fclose(FILE* file);
+size_t _fread(_PTR __restrict p, size_t _size, size_t _n, FILE *__restrict f);
+size_t _fwrite(const _PTR __restrict p , size_t _size, size_t _n, FILE * f);
+int _closedir(DIR* pdir);
+
+void _rewind(FILE* f);
+int _fscanf(FILE *__restrict f, const char *__restrict c, ...);
+int _fprintf(FILE *__restrict f, const char *__restrict c, ...);
+int _fgetc(FILE * f);
+int _fputc(int i, FILE * f);
+int _fputs(const char *__restrict c, FILE *__restrict f);
+char * _fgets(char *__restrict c, int i, FILE *__restrict f);
+int _fseek(FILE * f, long a, int b);
+long _ftell( FILE * f);
+
 
 
 /////////////// get cardridgeInfo from XML file ////////////////////

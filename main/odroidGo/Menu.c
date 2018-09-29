@@ -18,7 +18,8 @@
 #include <sys/dirent.h>
 #include "MSX.h"
 #include "EMULib.h"
-
+#include "esp_system.h"
+#include "odroid_settings.h"
 #include "minini.h"
 
 #define MAX_OBJECTS 6
@@ -68,8 +69,11 @@ char* lastOpenedFileFullPath;
 
 int position = 0;
 int selPosition = 0;
-   
-#define MENU_ITEMS 15
+#ifdef WITH_WLAN
+    #define MENU_ITEMS 15
+#else 
+    #define MENU_ITEMS 13
+#endif
 static const struct {
     const char* menuItem[MENU_ITEMS];
     
@@ -85,8 +89,10 @@ static const struct {
    "\n",
    "Audio output\n",
    "\n",
+#ifdef WITH_WLAN    
    "Start multiplayer server\n",
    "Start multiplayer client\n",
+#endif
    "\n",
    "About\n",
    
@@ -545,14 +551,32 @@ MENU_ACTION odroidFmsxGUI_showMenu() {
                    }
                    ret = MENU_ACTION_CHANGED_AUDIO_TYPE;
                    break;
+#ifdef WITH_WLAN                   
                case 11:
-                   odroidFmsxGUI_msgBox("Multiplayer", " Server is starting... ", 0);
-                   server_init();
-                   odroidFmsxGUI_msgBox("Multiplayer", " Server Started, waiting for connection ", 1);
+                   lastSelectedFile = odroidFmsxGUI_chooseFile(".rom\0.mx1\0.mx2\0.dsk\0\0"); 
+                   if (lastSelectedFile != NULL) {
+                       getFullPath(lastOpenedFileFullPath, lastSelectedFile, 1024);
+                       odroid_settings_RomFilePath_set(lastOpenedFileFullPath);
+                       odroid_settings_WLAN_set(ODROID_WLAN_AP);
+                       fflush(stdout);
+                       esp_restart();
+                   }
+                   
                    stopMenu = true;
                    break;
-               
+               case 12:
+                   odroidFmsxGUI_msgBox("Multiplayer", " Please wait...", 0);
+                   odroid_settings_WLAN_set(ODROID_WLAN_STA);
+                   fflush(stdout);
+                   esp_restart();
+                   stopMenu = true;
+                   break;
+#endif
+#ifdef WITH_WLAN 
                case 14:
+#else                   
+               case 12:
+#endif
                    odroidFmsxGUI_msgBox("About", " \nfMSX\n\n by Marat Fayzullin\n\n ported by Jan P. Schuemann\n\nThanks to the ODROID-GO community\n\nHave fun!\n ", 1);
                break;
            };

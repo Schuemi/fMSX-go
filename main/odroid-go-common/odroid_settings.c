@@ -21,7 +21,7 @@ static const char* NvsKey_Backlight = "Backlight";
 static const char* NvsKey_StartAction = "StartAction";
 static const char* NvsKey_ScaleDisabled = "ScaleDisabled";
 static const char* NvsKey_AudioSink = "AudioSink";
-
+static const char* NvsKey_WLANtype = "WLANtype";
 
 char* odroid_util_GetFileName(const char* path)
 {
@@ -517,3 +517,45 @@ void odroid_settings_AudioSink_set(ODROID_AUDIO_SINK value)
     nvs_close(my_handle);
     RESUME_DISPLAY_FUNCTION();
 }
+
+
+void odroid_settings_WLAN_set(ODROID_WLAN_TYPE value)
+{
+    STOP_DISPLAY_FUNCTION();
+    // Open
+    nvs_handle my_handle;
+    esp_err_t err = nvs_open(NvsNamespace, NVS_READWRITE, &my_handle);
+    if (err != ESP_OK) abort();
+
+    // Write
+    err = nvs_set_i32(my_handle, NvsKey_WLANtype, (int)value);
+    if (err != ESP_OK) abort();
+
+    // Close
+    nvs_close(my_handle);
+    RESUME_DISPLAY_FUNCTION();
+}
+
+ODROID_WLAN_TYPE odroid_settings_WLAN_get()
+{
+    STOP_DISPLAY_FUNCTION();
+    int result = ODROID_WLAN_NONE;
+
+    // Open
+    nvs_handle my_handle;
+    esp_err_t err = nvs_open(NvsNamespace, NVS_READWRITE, &my_handle);
+    if (err != ESP_OK) abort();
+
+    // Read
+    err = nvs_get_i32(my_handle, NvsKey_WLANtype, &result);
+    if (err == ESP_OK)
+    {
+        printf("%s: value=%d\n", __func__, result);
+    }
+
+    // Close
+    nvs_close(my_handle);
+    RESUME_DISPLAY_FUNCTION();
+    return (ODROID_WLAN_TYPE)result;
+}
+

@@ -182,33 +182,32 @@ void loadKeyMappingFromGame(const char* gameFileName) {
 /** InitMachine() ********************************************/
 /** Allocate resources needed by the machine-dependent code.**/
 /************************************ TO BE WRITTEN BY USER **/
+int InitChangeGame(const char* name) {
+    printf("Should load: %s\n", name);
+    loadKeyMappingFromGame(name);
+    if (hasExt(name, ".rom\0.mx1\0.mx2\0\0")) { ROMName[0] = name; printf("is rom\n");}
+    if (hasExt(name, ".dsk\0\0")){  DSKName[0] = name; printf("is disc\n");ROMName[0] = "";}
+    if (hasExt(name, ".cas\0\0")){ CasName = name; printf("is cas\n");ROMName[0] = "";}
 
+    odroidFmsxGUI_setLastLoadedFile(name);
+}
 int InitMachine(void){ 
     
- 
+
+    
     lastGame = malloc(1024);
     initFiles();
     
     setDefaultKeymapping();
     LoadKeyMapping("/sd/odroid/data/msx/config.ini");
-    
-    if(fileExist("/sd/odroid/data/msx/dac.dat")) {
-        // we have a saved state, should load this when the emulator is up
-       
-    }
+  
     InitVideo();
     odroidFmsxGUI_initMenu();
    
     
     int res = ini_gets("FMSX", "LASTGAME", "", lastGame, 1024, FMSX_CONFIG_FILE);
     if (res) {
-        loadKeyMappingFromGame(lastGame);
-        if (hasExt(lastGame, ".rom\0.mx1\0.mx2\0\0")) ROMName[0] = lastGame;
-        if (hasExt(lastGame, ".dsk\0\0")) DSKName[0] = lastGame;
-        if (hasExt(lastGame, ".cas\0\0")) CasName = lastGame;
-        
-        odroidFmsxGUI_setLastLoadedFile(lastGame);
-
+        InitChangeGame(lastGame);
     }
     
     InitSound(AUDIO_SAMPLE_RATE, 0);
@@ -273,20 +272,26 @@ void keybmoveCursor(odroid_gamepad_state out_state) {
     if (! out_state.values[ODROID_INPUT_SELECT]) holdVirtKeyboardSelectKey = -1;
      
 }
+
 unsigned int Joystick(void) {
-    unsigned int returnState = 0;
-  
     
+    
+    unsigned int returnState = 0;
     odroid_gamepad_state out_state;
     odroid_input_gamepad_read(&out_state);
-   
+#ifdef WITH_WLAN
+    if (getMultiplayState() != MULTIPLAYER_CONNECTED_CLIENT) {
+#endif
     bool pressed = false;
     for (int i = 0; i < ODROID_INPUT_MAX; i++) if (out_state.values[i]) pressed = true;
     if (! vKeyboardShow) {
         if (out_state.values[ODROID_INPUT_A] && out_state.values[ODROID_INPUT_MENU]){
             vKeyboardShow = 2;
             showVirtualKeyboard();
-            return 0;
+#ifdef WITH_WLAN            
+            exchangeJoystickState(&returnState);
+#endif
+            return returnState;
         }
     } else if (vKeyboardShow == 1) {
         if (out_state.values[ODROID_INPUT_MENU]){
@@ -302,10 +307,15 @@ unsigned int Joystick(void) {
     }
     if (vKeyboardShow) {
         if (vKeyboardShow == 1) keybmoveCursor(out_state);
-        return 0;
+#ifdef WITH_WLAN
+        exchangeJoystickState(&returnState);
+#endif        
+        return returnState;
     }
     if (inMenue && !pressed) inMenue = 0; 
-    
+#ifdef WITH_WLAN
+    }
+#endif    
     /* joystick mapping */
     for (int i = 0; i < ODROID_INPUT_MAX; i++){
         if (i == ODROID_INPUT_MENU || i == ODROID_INPUT_VOLUME) continue;
@@ -328,7 +338,9 @@ unsigned int Joystick(void) {
                 pushedKeys[ODROID_INPUT_VOLUME] = 1;
             }
         } else { pushedKeys[ODROID_INPUT_VOLUME] = 0; }
-        
+#ifdef WITH_WLAN
+    if (getMultiplayState() == MULTIPLAYER_NOT_CONNECTED) {
+#endif        
         if (out_state.values[ODROID_INPUT_MENU]) {
             // go into menu
             pressCounter = 0;
@@ -348,10 +360,15 @@ unsigned int Joystick(void) {
 
             clearScreen();
         }
+#ifdef WITH_WLAN
+    }
+#endif
 
     }
-   
-
+#ifdef WITH_WLAN    
+    exchangeJoystickState(&returnState);
+#endif
+    
     return returnState;
 }
 

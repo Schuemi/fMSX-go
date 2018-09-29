@@ -33,9 +33,9 @@
  
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+//#include <stdio.h>
+//#include <stdlib.h>
+//#include <string.h>
 
 #include "odroid_display.h"
 #include "freertos/FreeRTOS.h"

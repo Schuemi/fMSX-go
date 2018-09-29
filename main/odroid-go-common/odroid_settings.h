@@ -27,6 +27,13 @@ typedef enum
     ODROID_AUDIO_SINK_DAC
 } ODROID_AUDIO_SINK;
 
+typedef enum
+{
+    ODROID_WLAN_NONE = 99,
+    ODROID_WLAN_AP = 0,
+    ODROID_WLAN_STA
+} ODROID_WLAN_TYPE;
+
 
 int32_t odroid_settings_VRef_get();
 void odroid_settings_VRef_set(int32_t value);
@@ -54,3 +61,7 @@ void odroid_settings_ScaleDisabled_set(ODROID_SCALE_DISABLE system, uint8_t valu
 
 ODROID_AUDIO_SINK odroid_settings_AudioSink_get();
 void odroid_settings_AudioSink_set(ODROID_AUDIO_SINK value);
+
+ODROID_WLAN_TYPE odroid_settings_WLAN_get();
+void odroid_settings_WLAN_set(ODROID_WLAN_TYPE value);
+

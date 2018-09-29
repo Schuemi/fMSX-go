@@ -173,10 +173,10 @@ size_t _fwrite(const _PTR __restrict p , size_t _size, size_t _n, FILE * f) {
     return s;
 }
 
-int _closedir(FILE* f) {
+int _closedir(DIR* pdir) {
     int res;
     STOP_DISPLAY_FUNCTION();
-    res = closedir(f);
+    res = closedir(pdir);
     RESUME_DISPLAY_FUNCTION();
     return res;
 }
@@ -296,7 +296,13 @@ long _ftell( FILE * f) {
 }
 
 FILE* _fopen(const char *__restrict _name, const char *__restrict _type) {
-       
+     // are we in multiplayer modus? then don't send a state, not supportet yet
+#ifdef WITH_WLAN
+    if (getMultiplayState() != MULTIPLAYER_NOT_CONNECTED){
+        if (strstr(_name, ".sta")) return NULL;
+    }
+#endif    
+    //////////////////////////////////
      // is this a bios file?
     if (!strcmp(_name, "CMOS.ROM") || !strcmp(_name, "KANJI.ROM") || !strcmp(_name, "RS232.ROM") || !strcmp(_name, "MSXDOS2.ROM") || !strcmp(_name, "PAINTER.ROM")  || !strcmp(_name, "FMPAC.ROM") || !strcmp(_name, "MSX.ROM") || !strcmp(_name, "MSX2.ROM") || !strcmp(_name, "MSX2EXT.ROM") || !strcmp(_name, "DISK.ROM") || !strcmp(_name, "MSX2P.ROM") ||  !strcmp(_name, "MSX2PEXT.ROM")) {
         //it's a rom file, open from rom file path
