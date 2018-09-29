@@ -59,6 +59,7 @@ In multiplayer mode there are a few limitations:
 - You cannot enter the menu. To start another game or not to play in pairs, please turn off the devices.
 - Only the server can call the virtual keyboard.
 - Only the server has sound.
+- no save games
 
 Many games work very well, some crack the sound, some run too slowly. The problem is to run both games in exactly the same state. I've tried to get the best out of the hardware, maybe I'll find ways to optimize it, but I think it's going very well already. And it's a lot of fun.
 
