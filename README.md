@@ -42,17 +42,45 @@ Gamesaves are saved in the same directory as the game itself. It is calles [GAME
 
 You can open a virtual keyboard by pressing an hold the "A" button ans then the "Menu" button. On the virtual keyboard you can use the "A" or the "B" button to press a key. If you are holding a button, this button will also be holded in the emulator. So if you go to the "shift" key, press and hold "A" and then while pressing "A" go to the "1" key and press "B"  you will write a "!". Because on the real MSX if you would press shift + 1 you will also write a "!"
 
+
+
+# Multiplayer
+
+Multiplayer is really fun. I tested It a hole night with some friends and a couple of beers ;)
+
+To use multiplayer you need to have exactly the same BIOS files on both devices and the same game file in the same directory. The best way is to simply copy the SD from one device.
+
+One is the server, the other is the client. The server starts a game with "start multiplayer server" in the menu, the other one chooses "multiplayer client". The server selects a ROM or a floppy disk. Both devices will restart and they run now the same game.
+
+The "joystick" of the server runs in port 1, the client has port 2.
+
+In multiplayer mode there are a few limitations:
+
+- You cannot enter the menu. To start another game or not to play in pairs, please turn off the devices.
+- Only the server can call the virtual keyboard.
+- Only the server has sound.
+- no save games
+
+Many games work very well, some crack the sound, some run too slowly. The problem is to run both games in exactly the same state. I've tried to get the best out of the hardware, maybe I'll find ways to optimize it, but I think it's going very well already. And it's a lot of fun.
+
+You can't have two Multiplayer games with 4 devices at the same place yet. They're gonna bother each other, because there are no "Multiplayer rooms" yet.
+
+When it cracks in a game: just turn off the sound.
+
+How does this work?
+
+- The server starts an access point with a hidden Siid
+- The client searches for this access point, if he finds it he will connect
+- The server tells the client what game they whant to play
+- after starting the game on both devices they send UDP packts with joysick and keyboard data to each other. Both devices have to know what the other is doing in every vblank.
+
+
+
 # Next:
 
 The next things I'm planning are:
 
-- resolve sound issues in some games
-- resolve some speed and color issues with some games
-- complete the new menu
-- implement preview screenshots of the games
-- include WLAN
-- 2 player mode over WLAN
-
+- Bugfix, bugfix, bugfix. No new functions the nex releases.
 
 
 
