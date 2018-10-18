@@ -34,7 +34,7 @@
 
 #define FMSX_CONFIG_FILE "/sd/odroid/data/msx/config.ini"
 #define FMSX_ROOT_GAMESDIR "/sd/roms/msx"
-
+#define FMSX_ROOT_DATADIR "/sd/odroid/data/msx"
 #define FMSX_MP_ROM_DATA "/sd/odroid/data/msx/mprom.rom"
 
 #include <stdint.h>
@@ -63,6 +63,7 @@ void server_wait_for_player();
 void client_try_connect();
 MULTIPLAYER_STATE getMultiplayState();
 void exchangeJoystickState(uint16_t* state);
+bool isConnectionLost();
 const char* getMPFileName();
 
 #endif

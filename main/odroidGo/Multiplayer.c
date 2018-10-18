@@ -78,6 +78,7 @@ char lastremoteJoy = 0;
 char stopNet = 0;
 char gotRemoteData = 0;
 char tcpSend = 0;
+bool connectionLost = false;
 
 char playFileName[1024];
 void copyFile(const char* fileName, const char* destination);
@@ -87,6 +88,8 @@ void sendDataBlob(const char* data, uint16_t size);
 uint16_t recievDataBlob(char* data, uint16_t maxSize);
 int NETSend(const char *Out,int N);
 int NETRecv(char *In,int N);
+int gotAck = -1;
+
 
 /* The event group allows multiple bits for each event,
    but we only care about one event - are we connected
@@ -108,21 +111,24 @@ void sendTask(void* arg)
 {
 
   char sendBuf[20];
+
   memset(sendBuf, 0, 20);
   while(!stopNet)
   {
-      if (tcpSend) {
-        sendBuf[0] = 0xFF;
+      if (tcpSend && gotAck != currentLocalTickNumber) {
+        sendBuf[0] = currentRemoteTickNumber;
         sendBuf[1] = currentLocalTickNumber;
         sendBuf[2] = lastLocalJoy;
         sendBuf[3] = currentLocalJoy;
  if (mpState == MULTIPLAYER_CONNECTED_SERVER)       memcpy(sendBuf + 4, KeyState, 16);
         NETSend(sendBuf,20);
-      }
+      }  
+      
       vTaskDelay(7 / portTICK_PERIOD_MS);
       
+      
   }
-
+  
   
 
   vTaskDelete(NULL);
@@ -135,15 +141,17 @@ void recievTask(void* arg)
 
 
   char recievBuf[20];
+ 
   while(!stopNet)
   {
     recievBuf[0] = 0;
-    if(NETRecv(recievBuf,20)==20 && recievBuf[0] == 0xff) {
+    if(NETRecv(recievBuf,20)==20) {
         if (! gotRemoteData) {
             currentremoteJoy = recievBuf[3];
             lastremoteJoy = recievBuf[2];
             if (currentRemoteTickNumber != recievBuf[1]){gotRemoteData = 1; }
             currentRemoteTickNumber = recievBuf[1];
+            if (currentLocalTickNumber == recievBuf[0]) gotAck = recievBuf[0];
         }
 if (mpState == MULTIPLAYER_CONNECTED_CLIENT)   memcpy(KeyState, recievBuf+4, 16);
     
@@ -346,7 +354,7 @@ void client_try_connect()
          
                         
           xTaskCreatePinnedToCore(&sendTask, "sendTask", 2048, NULL, 2, NULL, 1);
-          xTaskCreatePinnedToCore(&recievTask, "recievTask", 2048, NULL, 2, NULL, 0);
+          xTaskCreatePinnedToCore(&recievTask, "recievTask", 2048, NULL, 2, NULL, 1);
 
         
     }
@@ -596,26 +604,35 @@ uint16_t recievDataBlob(char* data, uint16_t maxSize) {
 inline void copyKeyState(byte* a, byte* b) {
     memcpy(a,b,16);
 }
-
+bool isConnectionLost() {
+    return connectionLost;
+}
 void exchangeJoystickState(uint16_t* state)
 {
 
-   if (mpState == MP_NO_CONNECTION) return;
-  
+   if (mpState == MULTIPLAYER_NOT_CONNECTED) return;
    
    tcpSend = 1;
-   while (! gotRemoteData) vTaskDelay(0);
+   
+   static int running = 0;
+   if (running < 30) {
+       running++;
+       while (! gotRemoteData){vTaskDelay(1);}
+   } else {
+       int max = 0;
+       while (! gotRemoteData && ++max < 400){vTaskDelay(1);}
+       if (currentLocalTickNumber && max == 400) { connectionLost = true; }
+   }
+   
+   
    gotRemoteData = 0;
    
 
    char rJoy = 0;
+   
    if (currentRemoteTickNumber > currentLocalTickNumber || (currentRemoteTickNumber == 0 && currentLocalTickNumber == 255)) 
        rJoy = lastremoteJoy;
    else rJoy = currentremoteJoy;
-   
-   
-   while (currentRemoteTickNumber < currentLocalTickNumber && currentRemoteTickNumber != 0){vTaskDelay(0);}
-
    
    lastLocalJoy = currentLocalJoy;
    currentLocalJoy = *state & 0xff;
@@ -623,6 +640,7 @@ void exchangeJoystickState(uint16_t* state)
    if (mpState == MULTIPLAYER_CONNECTED_SERVER) *state = (rJoy << 8) + lastLocalJoy;
    
    currentLocalTickNumber++;
+   
    
    return;
 }

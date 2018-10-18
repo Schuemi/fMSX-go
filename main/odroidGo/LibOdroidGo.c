@@ -35,6 +35,7 @@
 #include <stdint.h>
 #include "odroid_display.h"
 #include "odroid_input.h"
+#include "odroid_qwerty.h"
 #include <esp_heap_caps.h>
 #include "sound.h"
 #include "odroid_audio.h"
@@ -61,8 +62,9 @@ uint8_t vKeyboardShow = 0;
 unsigned int lastKey = ODROID_INPUT_MENU;
 unsigned int pressCounter = 0;
 ///////////
-
-
+bool odroidQwertyFound = false;
+odroid_qwerty_state odroidQwertyPushedKeys;
+char holdShift = 0;
 
 void setDefaultKeymapping() {
     keyMapping[ODROID_INPUT_UP] = JST_UP;
@@ -212,8 +214,9 @@ int InitMachine(void){
     
     InitSound(AUDIO_SAMPLE_RATE, 0);
    
-
-   
+    odroidQwertyFound = odroid_qwerty_init();
+    printf("odroid_qwerty_found: %d\n",odroidQwertyFound);
+    memset(odroidQwertyPushedKeys.values, ODROID_QWERTY_NONE, ODROID_QWERTY_MAX_KEYS);
 
     return 1; 
 }
@@ -272,7 +275,34 @@ void keybmoveCursor(odroid_gamepad_state out_state) {
     if (! out_state.values[ODROID_INPUT_SELECT]) holdVirtKeyboardSelectKey = -1;
      
 }
+// standard ctrl buttons:
+/*
+ ctrl + h = delete
+ * ctrl + b cursor up
+ * ctrl + j cursor down
+ * ctrl + r insert
+ */
 
+uint8_t toMSXKey(uint8_t key, bool pressedCtrl) {
+    if (key == ODROID_QWERTY_TILDE) return KBD_STOP;
+    if (key == ODROID_QWERTY_ESC) return KBD_HOME;
+    if (key == ODROID_QWERTY_CTRL) return KBD_CONTROL;
+    if (key == ODROID_QWERTY_ALT) return KBD_GRAPH;
+    if (key == ODROID_QWERTY_SHIFT) return KBD_SHIFT;
+    if (key == ODROID_QWERTY_BS) return KBD_BS;
+    if (key == ODROID_QWERTY_ENTER) return KBD_ENTER;
+    if (key == ODROID_QWERTY_1 && pressedCtrl) return KBD_F1;
+    if (key == ODROID_QWERTY_2 && pressedCtrl) return KBD_F2;
+    if (key == ODROID_QWERTY_3 && pressedCtrl) return KBD_F3;
+    if (key == ODROID_QWERTY_4 && pressedCtrl) return KBD_F4;
+    if (key == ODROID_QWERTY_5 && pressedCtrl) return KBD_F5;
+    
+    char asc = odroid_qwerty_key_to_ascii(key, true);
+    if (asc >= 0x20 &&  asc < 0x61) return asc;
+    
+    return 0x00;
+   
+}
 unsigned int Joystick(void) {
     
     
@@ -329,7 +359,32 @@ unsigned int Joystick(void) {
             if (! out_state.values[i] && pushedKeys[i]){KBD_RES(keyMapping[i] >> 8); pushedKeys[i] = 0;}
         }
     }
-      
+    /* odroid qwerty keyboard */
+    if (odroidQwertyFound) {
+        odroid_qwerty_state keys;
+        bool newKey = odroid_qwerty_read(&keys);
+        if (newKey) {
+           for (int i = 0; i < ODROID_QWERTY_MAX_KEYS; i++) {
+               
+               /// hold shift
+               if (odroid_qwerty_is_key_pressed(&keys, ODROID_QWERTY_SHIFT) && odroid_qwerty_is_key_pressed(&keys, ODROID_QWERTY_CTRL))  {holdShift = 2;odroid_qwerty_led_Aa(true);}
+               else if (holdShift == 2 && ! odroid_qwerty_is_key_pressed(&keys, ODROID_QWERTY_SHIFT)) holdShift = 1;
+               else if (holdShift == 1 && odroid_qwerty_is_key_pressed(&keys, ODROID_QWERTY_SHIFT))   {holdShift = 0;odroid_qwerty_led_Aa(false);}
+               /////////////
+               if (odroidQwertyPushedKeys.values[i] != keys.values[i]) {
+                    if (keys.values[i] == ODROID_QWERTY_NONE ) {
+                        uint8_t key = toMSXKey(odroidQwertyPushedKeys.values[i], odroid_qwerty_is_key_pressed(&odroidQwertyPushedKeys, ODROID_QWERTY_CTRL));
+                        KBD_RES(key);
+                    } else {
+                        uint8_t key = toMSXKey(keys.values[i], odroid_qwerty_is_key_pressed(&keys, ODROID_QWERTY_CTRL));
+                        KBD_SET(key);
+                    }
+                }
+                if (holdShift) KBD_SET(KBD_SHIFT);
+            }
+            memcpy(odroidQwertyPushedKeys.values, keys.values, ODROID_QWERTY_MAX_KEYS);
+        }
+    }
     
     if (!inMenue){    
         if (out_state.values[ODROID_INPUT_VOLUME]) {
@@ -365,7 +420,13 @@ unsigned int Joystick(void) {
 #endif
 
     }
-#ifdef WITH_WLAN    
+#ifdef WITH_WLAN   
+    if (isConnectionLost()) {
+        pause_audio();
+        clearOverlay();
+        odroidFmsxGUI_msgBox("Connection", " \nThe connection has been lost\nPress a key to restart\n ", 1); 
+        esp_restart();
+    } 
     exchangeJoystickState(&returnState);
 #endif
     

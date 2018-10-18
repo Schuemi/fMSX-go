@@ -38,18 +38,16 @@
 
 #include <string.h>
 
-#define AUDIO_BUFFER_SAMPLES 1280
+
 
 
 //#define NO_SOUND
 
 
-static sample *streamAudioBuffer1;
-static sample *streamAudioBuffer2;
-sample *currentAudioBufferWrite;
-sample *currentAudioBufferSend;
-uint16_t audioBufferSize;
-uint16_t audioBufferSizeSend;
+sample *playData;
+unsigned int playLength;
+
+uint16_t toPlayLength = 0;
 QueueHandle_t audioQueue;
 ODROID_AUDIO_SINK sink = ODROID_AUDIO_SINK_NONE;
 
@@ -64,7 +62,10 @@ void audioTask(void* arg)
   {
     xQueuePeek(audioQueue, &param, portMAX_DELAY);
 #ifndef NO_SOUND
-   if (! stop) odroid_audio_submit(currentAudioBufferSend, audioBufferSizeSend/2);
+   if (! stop) {
+       RenderAndPlayAudio(toPlayLength);
+       odroid_audio_submit(playData, playLength/2);
+   }
 #endif
     xQueueReceive(audioQueue, &param, portMAX_DELAY);
   }
@@ -87,12 +88,6 @@ unsigned int InitAudio(unsigned int Rate,unsigned int Latency) {
     
     if (atoi(buf)) sink = ODROID_AUDIO_SINK_DAC; else sink = ODROID_AUDIO_SINK_SPEAKER;
     
-    streamAudioBuffer1 = (sample*)heap_caps_malloc(AUDIO_BUFFER_SAMPLES*sizeof(sample)*2, MALLOC_CAP_DMA | MALLOC_CAP_8BIT);
-    streamAudioBuffer2 = (sample*)heap_caps_malloc(AUDIO_BUFFER_SAMPLES*sizeof(sample)*2, MALLOC_CAP_DMA | MALLOC_CAP_8BIT);
-    if (! streamAudioBuffer1){ printf("streamAudioBuffer1 failed!\n"); return 0;}
-    if (! streamAudioBuffer2){ printf("streamAudioBuffer2 failed!\n"); return 0;}
-    currentAudioBufferWrite = streamAudioBuffer1;
-    currentAudioBufferSend = streamAudioBuffer2;
     
     audioQueue = xQueueCreate(1, sizeof(uint16_t*));
     
@@ -107,8 +102,7 @@ unsigned int InitAudio(unsigned int Rate,unsigned int Latency) {
     return Rate;
 }
 void TrashAudio(void){
-    free(streamAudioBuffer1);
-    free(streamAudioBuffer2);
+
 }
 
 void audio_volume_set_change() {
@@ -142,44 +136,23 @@ void PlayAllSound(int uSec) {
 #ifdef NO_SOUND
     return;
 #endif
-#ifdef WITH_WLAN
-    if (getMultiplayState() == MULTIPLAYER_CONNECTED_CLIENT) return;
-#endif
-    RenderAndPlayAudio(2*uSec*AUDIO_SAMPLE_RATE/1000000);
-    
+//#ifdef WITH_WLAN
+//    if (getMultiplayState() == MULTIPLAYER_CONNECTED_CLIENT) return;
+//#endif
+    void* tempPtr = (void*)0x1234;
+    toPlayLength = 2*uSec*AUDIO_SAMPLE_RATE/1000000;
+    xQueueSend(audioQueue, &tempPtr, portMAX_DELAY);
+        
 }
-void switchAudioBuffer(){
-    if (currentAudioBufferWrite == streamAudioBuffer1){
-        currentAudioBufferWrite = streamAudioBuffer2;
-        currentAudioBufferSend = streamAudioBuffer1;
-    } else {
-        currentAudioBufferWrite = streamAudioBuffer1;
-        currentAudioBufferSend = streamAudioBuffer2;
-    }
-    audioBufferSizeSend = audioBufferSize;
-    
-}
-
 
 unsigned int WriteAudio(sample *Data,unsigned int Length)
 {
-    void* tempPtr = (void*)0x1234;
-    if (audioBufferSize + Length > AUDIO_BUFFER_SAMPLES) Length = AUDIO_BUFFER_SAMPLES - audioBufferSize;
-    
-    
-    memcpy((currentAudioBufferWrite + audioBufferSize), Data, Length*sizeof(sample));
-    audioBufferSize += Length;
-    
-    
-    if (audioBufferSize >= AUDIO_BUFFER_SAMPLES-(Length<<1)) { 
-        switchAudioBuffer();
-        xQueueSend(audioQueue, &tempPtr, portMAX_DELAY);
-        audioBufferSize = 0;
-   }
+    playData = Data;
+    playLength = Length;
     return Length;
 }
 unsigned int GetFreeAudio(void)
 {
-    return AUDIO_BUFFER_SAMPLES;
+    return 1024;
     
 }

@@ -25,7 +25,7 @@
 
 int getRomType(const char* sha);
 int fileExist(const char* fileName);
-
+int dirExist(const char* dirName);
 
 
 

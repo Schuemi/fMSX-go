@@ -24,7 +24,7 @@
 #include "utils.h"
 #include <string.h>
 #include <stdio.h>
-
+#include <sys/dirent.h>
 
 
 #define SHA_ROM_TYPES 754
@@ -805,4 +805,12 @@ int fileExist(const char* fileName) {
     if(!(F=_fopen(fileName,"rb"))) return(0);
     close(F);
     return(1);
+}
+
+int dirExist(const char* dirName) {
+    DIR* d = opendir(dirName);
+    if (! d) return (0);
+    closedir(d);
+    return (1);
+    
 }

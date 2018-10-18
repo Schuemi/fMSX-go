@@ -33,6 +33,7 @@
 // set to : 8px by 8px, row major, little endian.
 
 /// link  the video function on top of the rest (more speed))
+
 #include "../video/AVideo.i"
 
 
@@ -56,6 +57,9 @@
 #include "esp_event_loop.h"
 
 #include "odroid_settings.h"
+
+#include "utils.h"
+
 
 
 #ifndef PIXEL
@@ -108,18 +112,23 @@ void app_main(void) {
    ili9341_prepare();
    ili9341_init();
    
-
-
+   /// keyboard
    
-   /// draw frames in %
+
    UPeriod = 50;
 
    initOkay = InitMachine();
    
-   
+   if (initOkay) { 
+        if (! dirExist(FMSX_ROOT_GAMESDIR)) mkdir(FMSX_ROOT_GAMESDIR, 666);
+        if (! dirExist(FMSX_ROOT_GAMESDIR"/bios")) mkdir(FMSX_ROOT_GAMESDIR"/bios", 666);
+        if (! dirExist(FMSX_ROOT_DATADIR)) mkdir(FMSX_ROOT_DATADIR, 666);
+   }
    
   
    if (initOkay) {
+       
+       
 #ifdef WITH_WLAN
    if (wlan == ODROID_WLAN_AP){ server_wait_for_player(); } 
    if (wlan == ODROID_WLAN_STA){ client_try_connect();} 
