@@ -189,7 +189,7 @@ QueueHandle_t videoQueue;
 uint16_t VideoTaskCommand = 1;
 static uint16_t* BPal;
 static uint16_t* XPal;
-static uint16_t* XPal0; 
+static uint16_t XPal0; 
 Image overlay;
 uint32_t FirstLine = 18;
 uint16_t lastLine = 0;
