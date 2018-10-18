@@ -57,8 +57,8 @@ The "joystick" of the server runs in port 1, the client has port 2.
 In multiplayer mode there are a few limitations:
 
 - You cannot enter the menu. To start another game or not to play in pairs, please turn off the devices.
-- Only the server can call the virtual keyboard.
-- Only the server has sound.
+- Only the server can call the virtual keyboard / the ODROID QWERTY.
+- ~~Only the server has sound.~~
 - no save games
 
 Many games work very well, some crack the sound, some run too slowly. The problem is to run both games in exactly the same state. I've tried to get the best out of the hardware, maybe I'll find ways to optimize it, but I think it's going very well already. And it's a lot of fun.
@@ -75,7 +75,6 @@ How does this work?
 - after starting the game on both devices they send UDP packts with joysick and keyboard data to each other. Both devices have to know what the other is doing in every vblank.
 
 
-
 # Next:
 
 The next things I'm planning are:
@@ -83,4 +82,24 @@ The next things I'm planning are:
 - Bugfix, bugfix, bugfix. No new functions the nex releases.
 
 
+
+# Donations 
+
+Donations are very welcome. I have long wondered if I should add a donate button here or not. But, what the hell, if one or the other beer should come out for my troubles here, I like to drink one to you! Thanks a lot!
+
+One beer donation (3.50€):
+<a href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=HTTLDQT45WAPC" rel="some text">![3.50](https://www.paypalobjects.com/en_GB/i/btn/btn_donate_LG.gif)</a>
+
+Two beer donations (5.00€):
+<a href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=V32J6VX9Y7QQJ" rel="some text">![5.00](https://www.paypalobjects.com/en_GB/i/btn/btn_donate_LG.gif)</a>
+
+Donate a six-pack of beer. :) (10.00€):
+<a href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=QM4DJECCZTKPY" rel="some text">![10.00](https://www.paypalobjects.com/en_GB/i/btn/btn_donate_LG.gif)</a>
+
+
+
+
+
+Hint:
+If you find any spelling or grammatical mistakes, please tell me. My english could be better. Thank you.
 
