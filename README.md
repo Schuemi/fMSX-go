@@ -81,6 +81,12 @@ The next things I'm planning are:
 
 - Bugfix, bugfix, bugfix. No new functions the nex releases.
 
+# ODROID QWERTY
+![QWERTY](https://raw.githubusercontent.com/Schuemi/fMSX-go/master/res/IMG_20181016_165658.jpg)
+
+You can use the Odroid QWERTY keyboard now to write some BASIC code ;)
+To press the F1-F5 keys, press Ctrl+1, Ctrl+2 ...
+To lock the shift key press Ctrl + Up. To unlock press up only.
 
 
 # Donations 
